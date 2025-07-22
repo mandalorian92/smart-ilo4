@@ -74,3 +74,8 @@ export function resetSensorOverrides() {
 export function getSensorHistory() {
   return history;
 }
+
+export async function setFanSpeed(speed: number) {
+  // For demo: Set all fans to this speed
+  fans.forEach(f => { f.speed = speed; });
+}
