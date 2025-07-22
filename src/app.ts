@@ -1,11 +1,16 @@
 // Serve frontend static files
 import path from "path";
+import { fileURLToPath } from "url";
 import express from "express";
 import cors from "cors";
 import sensorsRouter from "./api/sensors.js";
 import fansRouter from "./api/fans.js";
 import redfishRouter from "./api/redfish.js";
 import automationRouter from "./api/automation.js";
+
+// ES module equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(cors());
