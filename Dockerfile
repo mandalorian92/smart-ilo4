@@ -29,5 +29,5 @@ COPY package.json yarn.lock ./
 # Only need dependencies at runtime
 RUN yarn install --production --frozen-lockfile
 
-EXPOSE 3000
+EXPOSE 8443
 CMD ["node", "dist/index.js"]

@@ -9,14 +9,21 @@ function Dashboard() {
 
   useEffect(() => {
     async function fetchData() {
-      setLoading(true);
-      const [sensorsData, fansData] = await Promise.all([getSensors(), getFans()]);
-      setSensors(sensorsData);
-      setFans(fansData);
-      setLoading(false);
+      try {
+        const [sensorsData, fansData] = await Promise.all([getSensors(), getFans()]);
+        setSensors(sensorsData);
+        setFans(fansData);
+      } catch (error) {
+        console.error('Failed to fetch data:', error);
+      } finally {
+        setLoading(false);
+      }
     }
     fetchData();
-    const interval = setInterval(fetchData, 5000);
+    const interval = setInterval(() => {
+      // Don't show loading on updates, just update data silently
+      fetchData();
+    }, 10000); // Update every 10 seconds instead of 5
     return () => clearInterval(interval);
   }, []);
 

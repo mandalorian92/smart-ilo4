@@ -20,6 +20,10 @@ app.use(cors({
 app.use(express.json());
 
 app.get("/", (_req, res) => {
+  res.sendFile(path.join(__dirname, "../frontend/build/index.html"));
+});
+
+app.get("/api", (_req, res) => {
   res.send("<h1>iLO4 Fan Controller API is running.</h1>");
 });
 

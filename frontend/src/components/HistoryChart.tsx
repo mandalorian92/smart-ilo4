@@ -21,13 +21,20 @@ function HistoryChart() {
 
   useEffect(() => {
     async function fetchHistory() {
-      setLoading(true);
-      const hist = await getHistory();
-      setData(hist);
-      setLoading(false);
+      try {
+        const hist = await getHistory();
+        setData(hist);
+      } catch (error) {
+        console.error('Failed to fetch history:', error);
+      } finally {
+        setLoading(false);
+      }
     }
     fetchHistory();
-    const interval = setInterval(fetchHistory, 30000);
+    const interval = setInterval(() => {
+      // Update silently without showing loading
+      fetchHistory();
+    }, 60000); // Update every minute instead of 30 seconds
     return () => clearInterval(interval);
   }, []);
 

@@ -27,3 +27,18 @@ export async function resetSensors() {
   const res = await axios.post(`${API_BASE}/sensors/reset`);
   return res.data;
 }
+
+export async function overrideFan(fanId: string, speed: number) {
+  const res = await axios.post(`${API_BASE}/fans/override`, { fanId, speed });
+  return res.data;
+}
+
+export async function resetFans() {
+  const res = await axios.post(`${API_BASE}/fans/reset`);
+  return res.data;
+}
+
+export async function setAllFanSpeeds(speed: number) {
+  const res = await axios.post(`${API_BASE}/fans/set-all`, { speed });
+  return res.data;
+}

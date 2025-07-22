@@ -2,7 +2,7 @@ import React from "react";
 import { Container, Typography, Box, AppBar, Toolbar } from "@mui/material";
 import Dashboard from "./components/Dashboard";
 import HistoryChart from "./components/HistoryChart";
-import Controls from "./components/Controls";
+import FanControls from "./components/FanControls";
 
 function App() {
   return (
@@ -15,7 +15,7 @@ function App() {
       <Container maxWidth="md" sx={{ mt: 4 }}>
         <Dashboard />
         <HistoryChart />
-        <Controls />
+        <FanControls />
       </Container>
     </Box>
   );
