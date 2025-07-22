@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { getSensors, setFanSpeed } from "./ilo";
+import { getSensors, setFanSpeed } from "./ilo.js";
 
 type Sensor = {
   name: string;

@@ -1,6 +1,6 @@
 import fetch from "node-fetch";
 import base64 from "base-64";
-import { ILO_HOST, ILO_USERNAME, ILO_PASSWORD } from "../config/env";
+import { ILO_HOST, ILO_USERNAME, ILO_PASSWORD } from "../config/env.js";
 import https from "https";
 
 const agent = new https.Agent({ rejectUnauthorized: false });

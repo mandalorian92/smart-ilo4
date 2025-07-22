@@ -1,5 +1,5 @@
 import { NodeSSH } from "node-ssh";
-import { ILO_HOST, ILO_USERNAME, ILO_PASSWORD } from "../config/env";
+import { ILO_HOST, ILO_USERNAME, ILO_PASSWORD } from "../config/env.js";
 
 export async function runIloCommand(command: string): Promise<string> {
   const ssh = new NodeSSH();

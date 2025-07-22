@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getFans } from "../services/ilo";
+import { getFans } from "../services/ilo.js";
 
 const router = Router();
 

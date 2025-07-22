@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getThermalData } from "../services/redfish";
+import { getThermalData } from "../services/redfish.js";
 const router = Router();
 
 router.get("/thermal", async (_req, res) => {

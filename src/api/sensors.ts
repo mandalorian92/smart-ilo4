@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getSensors, overrideSensor, resetSensorOverrides, getSensorHistory } from "../services/ilo";
+import { getSensors, overrideSensor, resetSensorOverrides, getSensorHistory } from "../services/ilo.js";
 
 const router = Router();
 

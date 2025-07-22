@@ -2,8 +2,10 @@
 import path from "path";
 import express from "express";
 import cors from "cors";
-import sensorsRouter from "./api/sensors";
-import fansRouter from "./api/fans";
+import sensorsRouter from "./api/sensors.js";
+import fansRouter from "./api/fans.js";
+import redfishRouter from "./api/redfish.js";
+import automationRouter from "./api/automation.js";
 
 const app = express();
 app.use(cors());
@@ -16,6 +18,8 @@ app.get("/", (_req, res) => {
 // Register API routes
 app.use("/sensors", sensorsRouter);
 app.use("/fans", fansRouter);
+app.use("/redfish", redfishRouter);
+app.use("/automation", automationRouter);
 
 // Serve static files from frontend build
 app.use(express.static(path.join(__dirname, "../frontend/build")));

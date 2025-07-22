@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { startAutomation, stopAutomation } from "../services/automation";
+import { startAutomation, stopAutomation } from "../services/automation.js";
 const router = Router();
 
 router.post("/start", (req, res) => {
