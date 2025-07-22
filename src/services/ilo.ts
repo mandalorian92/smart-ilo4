@@ -1,5 +1,6 @@
 // This file holds the logic for sensors, fans, overrides, and history collection.
 import { getThermalData } from "./redfish.js";
+import { runIloCommand } from "./sshClient.js";
 
 type Sensor = {
   name: string;
@@ -162,10 +163,74 @@ export function getSensorHistory() {
 }
 
 export async function setFanSpeed(speed: number) {
-  // This will be implemented with SSH commands to iLO
-  console.log(`Setting all fans to ${speed}%`);
-  const fans = await getFans();
-  fans.forEach(fan => {
-    fanOverrides[fan.name] = speed;
-  });
+  try {
+    // Use SSH commands to set all fans via global unlock and lock
+    await unlockFanControl();
+    
+    // Get current fans and lock each one at the specified speed
+    const fans = await getFans();
+    for (let i = 0; i < fans.length; i++) {
+      await lockFanAtSpeed(i, speed);
+    }
+  } catch (error) {
+    console.error(`Failed to set all fans to ${speed}%:`, error);
+    // Fallback to override system
+    const fans = await getFans();
+    fans.forEach(fan => {
+      fanOverrides[fan.name] = speed;
+    });
+  }
+}
+
+// SSH-based fan control functions for iLO4
+export async function unlockFanControl(): Promise<void> {
+  try {
+    await runIloCommand("fan p global unlock");
+  } catch (error) {
+    throw new Error(`Failed to unlock fan control: ${(error as Error).message}`);
+  }
+}
+
+export async function lockFanAtSpeed(fanId: number, speedPercent: number): Promise<void> {
+  try {
+    // Convert percentage to PWM value (0-100% to 0-255)
+    const pwmValue = Math.round((speedPercent / 100) * 255);
+    await runIloCommand(`fan p ${fanId} lock ${pwmValue}`);
+  } catch (error) {
+    throw new Error(`Failed to lock fan ${fanId} at ${speedPercent}%: ${(error as Error).message}`);
+  }
+}
+
+export async function setPidLowLimit(pidId: number, lowLimitPercent: number): Promise<void> {
+  try {
+    // iLO expects the value multiplied by 100
+    const iloValue = lowLimitPercent * 100;
+    await runIloCommand(`fan pid ${pidId} lo ${iloValue}`);
+  } catch (error) {
+    throw new Error(`Failed to set PID ${pidId} low limit to ${lowLimitPercent}%: ${(error as Error).message}`);
+  }
+}
+
+export async function getFanInfo(): Promise<string> {
+  try {
+    return await runIloCommand("fan info");
+  } catch (error) {
+    throw new Error(`Failed to get fan info: ${(error as Error).message}`);
+  }
+}
+
+export async function getFanPidInfo(): Promise<string> {
+  try {
+    return await runIloCommand("fan info a");
+  } catch (error) {
+    throw new Error(`Failed to get PID info: ${(error as Error).message}`);
+  }
+}
+
+export async function getFanGroupInfo(): Promise<string> {
+  try {
+    return await runIloCommand("fan info g");
+  } catch (error) {
+    throw new Error(`Failed to get fan group info: ${(error as Error).message}`);
+  }
 }

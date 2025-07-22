@@ -25,8 +25,6 @@ function Dashboard() {
   const [sensors, setSensors] = useState<any[]>([]);
   const [fans, setFans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showMissingSensors, setShowMissingSensors] = useState(false);
-  const [showEmptyBays, setShowEmptyBays] = useState(false);
   const [showFahrenheit, setShowFahrenheit] = useState(false);
 
   useEffect(() => {
@@ -99,20 +97,9 @@ function Dashboard() {
     }
   };
 
-  // Filter sensors and fans based on toggle states
-  const filteredSensors = sensors.filter(sensor => {
-    if (!showMissingSensors && sensor.status !== 'OK') {
-      return false;
-    }
-    return true;
-  });
-
-  const filteredFans = fans.filter(fan => {
-    if (!showEmptyBays && fan.status === 'Absent') {
-      return false;
-    }
-    return true;
-  });
+  // Filter sensors and fans based on backend data (no additional filtering needed)
+  const filteredSensors = sensors;
+  const filteredFans = fans;
 
   if (loading) return <CircularProgress />;
 
@@ -121,22 +108,9 @@ function Dashboard() {
       {/* Fans Table */}
       <Card sx={{ mb: 4 }}>
         <CardContent>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6">
-              Fans
-            </Typography>
-            <FormControlLabel
-              control={
-                <Switch 
-                  checked={showEmptyBays} 
-                  onChange={(e) => setShowEmptyBays(e.target.checked)}
-                  size="small"
-                />
-              }
-              label="show empty bays"
-              sx={{ fontSize: '0.875rem' }}
-            />
-          </Box>
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            Fans
+          </Typography>
           
           <TableContainer component={Paper} variant="outlined">
             <Table size="small">
@@ -173,24 +147,9 @@ function Dashboard() {
       {/* Sensor Data Table */}
       <Card sx={{ mb: 4 }}>
         <CardContent>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6">
-              Sensor Data
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <FormControlLabel
-                control={
-                  <Switch 
-                    checked={showMissingSensors} 
-                    onChange={(e) => setShowMissingSensors(e.target.checked)}
-                    size="small"
-                  />
-                }
-                label="show missing sensors"
-                sx={{ fontSize: '0.875rem' }}
-              />
-            </Box>
-          </Box>
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            Sensor Data
+          </Typography>
 
           <Box sx={{ mb: 2 }}>
             <FormControlLabel

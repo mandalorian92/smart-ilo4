@@ -42,3 +42,33 @@ export async function setAllFanSpeeds(speed: number) {
   const res = await axios.post(`${API_BASE}/fans/set-all`, { speed });
   return res.data;
 }
+
+export async function unlockFanControl() {
+  const res = await axios.post(`${API_BASE}/fans/unlock`);
+  return res.data;
+}
+
+export async function lockFanAtSpeed(fanId: number, speed: number) {
+  const res = await axios.post(`${API_BASE}/fans/lock`, { fanId, speed });
+  return res.data;
+}
+
+export async function setPidLowLimit(pidId: number, lowLimit: number) {
+  const res = await axios.post(`${API_BASE}/fans/pid-low-limit`, { pidId, lowLimit });
+  return res.data;
+}
+
+export async function getFanInfo() {
+  const res = await axios.get(`${API_BASE}/fans/info`);
+  return res.data;
+}
+
+export async function getFanPidInfo() {
+  const res = await axios.get(`${API_BASE}/fans/pid-info`);
+  return res.data;
+}
+
+export async function getFanGroupInfo() {
+  const res = await axios.get(`${API_BASE}/fans/group-info`);
+  return res.data;
+}

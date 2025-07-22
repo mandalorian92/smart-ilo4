@@ -8,7 +8,12 @@ export async function runIloCommand(command: string): Promise<string> {
       host: ILO_HOST,
       username: ILO_USERNAME,
       password: ILO_PASSWORD,
-      algorithms: { kex: ["diffie-hellman-group14-sha1"] },
+      algorithms: { 
+        kex: ["diffie-hellman-group14-sha1"],
+        serverHostKey: ["ssh-rsa"],
+        cipher: ["aes128-cbc", "3des-cbc"],
+        hmac: ["hmac-sha1"]
+      },
     });
     const { stdout, stderr } = await ssh.execCommand(command);
     if (stderr) throw new Error(stderr);

@@ -1,5 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { getSensors, getFans, overrideSensor, resetSensors } from "../api";
+import { 
+  getSensors, 
+  getFans, 
+  overrideSensor, 
+  resetSensors, 
+  setAllFanSpeeds,
+  unlockFanControl,
+  lockFanAtSpeed,
+  resetFans
+} from "../api";
 import { 
   Card, 
   CardContent, 
@@ -18,7 +27,9 @@ import {
   Divider,
   Switch,
   FormControlLabel,
-  Paper
+  Paper,
+  Alert,
+  Snackbar
 } from "@mui/material";
 
 function FanControls() {
@@ -27,22 +38,22 @@ function FanControls() {
   const [editAllMode, setEditAllMode] = useState(false);
   const [globalSpeed, setGlobalSpeed] = useState(21);
   const [loading, setLoading] = useState(true);
+  const [notification, setNotification] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'info' | 'warning';
+  }>({ open: false, message: '', severity: 'info' });
+
+  const showNotification = (message: string, severity: 'success' | 'error' | 'info' | 'warning' = 'info') => {
+    setNotification({ open: true, message, severity });
+  };
+
+  const closeNotification = () => {
+    setNotification(prev => ({ ...prev, open: false }));
+  };
 
   useEffect(() => {
-    async function fetchFans() {
-      try {
-        const data = await getFans();
-        setFans(data);
-        const speeds: Record<string, number> = {};
-        data.forEach((fan: any) => speeds[fan.name] = fan.speed);
-        setFanSpeeds(speeds);
-      } catch (error) {
-        console.error('Failed to fetch fans:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchFans();
+    fetchFans().finally(() => setLoading(false));
   }, []);
 
   const handleFanSpeedChange = (fanName: string, speed: number) => {
@@ -66,20 +77,77 @@ function FanControls() {
   };
 
   const handleUpdate = async () => {
-    // TODO: Implement actual fan speed setting via API
-    console.log('Updating fan speeds:', fanSpeeds);
-    alert('Fan speeds updated!');
+    try {
+      setLoading(true);
+      
+      if (editAllMode) {
+        // If in edit all mode, set all fans to the global speed
+        await setAllFanSpeeds(globalSpeed);
+        showNotification(`All fans set to ${globalSpeed}%`, 'success');
+      } else {
+        // Set individual fan speeds
+        for (const [fanName, speed] of Object.entries(fanSpeeds)) {
+          const fanIndex = fans.findIndex(f => f.name === fanName);
+          if (fanIndex >= 0) {
+            await lockFanAtSpeed(fanIndex, speed);
+          }
+        }
+        showNotification('Fan speeds updated successfully', 'success');
+      }
+      
+      // Refresh fan data
+      await fetchFans();
+    } catch (error) {
+      console.error('Failed to update fan speeds:', error);
+      showNotification(`Failed to update fan speeds: ${(error as any).response?.data?.error || (error as Error).message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleReset = () => {
-    // Reset to original speeds
-    const originalSpeeds: Record<string, number> = {};
-    fans.forEach(fan => originalSpeeds[fan.name] = fan.speed);
-    setFanSpeeds(originalSpeeds);
+  const handleReset = async () => {
+    try {
+      setLoading(true);
+      await resetFans();
+      
+      // Reset to original speeds
+      const originalSpeeds: Record<string, number> = {};
+      fans.forEach(fan => originalSpeeds[fan.name] = fan.speed);
+      setFanSpeeds(originalSpeeds);
+      
+      showNotification('Fan overrides reset successfully', 'success');
+      await fetchFans();
+    } catch (error) {
+      console.error('Failed to reset fans:', error);
+      showNotification(`Failed to reset fans: ${(error as any).response?.data?.error || (error as Error).message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleUnlock = () => {
-    alert('This would unlock manual fan control via SSH to iLO');
+  const handleUnlock = async () => {
+    try {
+      setLoading(true);
+      await unlockFanControl();
+      showNotification('Fan control unlocked successfully', 'success');
+    } catch (error) {
+      console.error('Failed to unlock fan control:', error);
+      showNotification(`Failed to unlock fan control: ${(error as any).response?.data?.error || (error as Error).message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchFans = async () => {
+    try {
+      const data = await getFans();
+      setFans(data);
+      const speeds: Record<string, number> = {};
+      data.forEach((fan: any) => speeds[fan.name] = fan.speed);
+      setFanSpeeds(speeds);
+    } catch (error) {
+      console.error('Failed to fetch fans:', error);
+    }
   };
 
   if (loading) return <CircularProgress />;
@@ -182,17 +250,19 @@ function FanControls() {
         </Box>
 
         {/* Action Buttons */}
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
           <Button
             variant="contained"
             onClick={handleUpdate}
+            disabled={loading}
             sx={{ bgcolor: '#27ae60', '&:hover': { bgcolor: '#229954' } }}
           >
-            Update
+            {loading ? <CircularProgress size={20} sx={{ color: 'white' }} /> : 'Update'}
           </Button>
           <Button
             variant="contained"
             onClick={handleReset}
+            disabled={loading}
             sx={{ bgcolor: '#3498db', '&:hover': { bgcolor: '#2980b9' } }}
           >
             Reset
@@ -200,11 +270,71 @@ function FanControls() {
           <Button
             variant="contained"
             onClick={handleUnlock}
+            disabled={loading}
             sx={{ bgcolor: '#34495e', '&:hover': { bgcolor: '#2c3e50' } }}
           >
             Unlock
           </Button>
         </Box>
+
+        <Divider sx={{ my: 3, borderColor: '#555' }} />
+
+        {/* Advanced Controls */}
+        <Typography variant="h6" sx={{ mb: 2, color: '#f39c12' }}>
+          Advanced Controls
+        </Typography>
+        
+        <Typography variant="body2" sx={{ mb: 2, color: '#bdc3c7' }}>
+          These controls interact directly with iLO4 via SSH. Use with caution.
+        </Typography>
+
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+          <Button
+            variant="outlined"
+            onClick={() => showNotification('Feature coming soon: PID low limit adjustment', 'info')}
+            sx={{ 
+              borderColor: '#f39c12', 
+              color: '#f39c12',
+              '&:hover': { borderColor: '#e67e22', backgroundColor: 'rgba(243, 156, 18, 0.1)' }
+            }}
+          >
+            Adjust PID Low Limits
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => showNotification('Feature coming soon: Fan info display', 'info')}
+            sx={{ 
+              borderColor: '#9b59b6', 
+              color: '#9b59b6',
+              '&:hover': { borderColor: '#8e44ad', backgroundColor: 'rgba(155, 89, 182, 0.1)' }
+            }}
+          >
+            Show Fan Info
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => showNotification('Feature coming soon: Group analysis', 'info')}
+            sx={{ 
+              borderColor: '#e74c3c', 
+              color: '#e74c3c',
+              '&:hover': { borderColor: '#c0392b', backgroundColor: 'rgba(231, 76, 60, 0.1)' }
+            }}
+          >
+            Analyze Groups
+          </Button>
+        </Box>
+
+        {/* Notification Snackbar */}
+        <Snackbar
+          open={notification.open}
+          autoHideDuration={6000}
+          onClose={closeNotification}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        >
+          <Alert onClose={closeNotification} severity={notification.severity} sx={{ width: '100%' }}>
+            {notification.message}
+          </Alert>
+        </Snackbar>
       </CardContent>
     </Card>
   );
