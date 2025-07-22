@@ -7,7 +7,7 @@ router.get("/thermal", async (_req, res) => {
     const data = await getThermalData();
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 

@@ -8,7 +8,7 @@ router.post("/set", async (req, res) => {
     await setFanSpeed(Number(speed));
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 
@@ -17,7 +17,7 @@ router.post("/unlock", async (_req, res) => {
     await unlockFans();
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 

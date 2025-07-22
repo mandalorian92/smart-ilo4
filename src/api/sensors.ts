@@ -7,7 +7,7 @@ router.get("/", async (_req, res) => {
     const sensors = await getSensors();
     res.json(sensors);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 
