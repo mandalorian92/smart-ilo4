@@ -1,9 +1,32 @@
+# Build frontend
+FROM node:20-alpine AS frontend-build
+WORKDIR /app/frontend
+COPY frontend/package.json frontend/yarn.lock ./
+RUN yarn install --frozen-lockfile
+COPY frontend/ ./
+RUN yarn build
+
+# Build backend
+FROM node:20-alpine AS backend-build
+WORKDIR /app
+COPY package.json yarn.lock tsconfig.json ./
+RUN yarn install --frozen-lockfile
+COPY src ./src
+COPY --from=frontend-build /app/frontend/build ./frontend/build
+RUN yarn build
+
+# Production image
 FROM node:20-alpine
 WORKDIR /app
-COPY package.json tsconfig.json yarn.lock ./
-RUN yarn install --frozen-lockfile
-COPY ./src ./src
-RUN yarn add -D @types/node-cron @types/node-fetch @types/base-64
-RUN yarn build
+ENV NODE_ENV=production
+
+# Copy only built files and essentials
+COPY --from=backend-build /app/dist ./dist
+COPY --from=backend-build /app/frontend/build ./frontend/build
+COPY package.json yarn.lock ./
+
+# Only need dependencies at runtime
+RUN yarn install --production --frozen-lockfile
+
 EXPOSE 3000
-CMD ["yarn", "start"]
+CMD ["node", "dist/index.js"]

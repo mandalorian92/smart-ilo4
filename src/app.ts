@@ -1,3 +1,5 @@
+// Serve frontend static files
+import path from "path";
 import express from "express";
 import cors from "cors";
 import sensorsRouter from "./api/sensors";
@@ -14,5 +16,13 @@ app.get("/", (_req, res) => {
 // Register API routes
 app.use("/sensors", sensorsRouter);
 app.use("/fans", fansRouter);
+
+// Serve static files from frontend build
+app.use(express.static(path.join(__dirname, "../frontend/build")));
+
+// For any other route, serve index.html (for React Router)
+app.get("*", (_req, res) => {
+  res.sendFile(path.join(__dirname, "../frontend/build/index.html"));
+});
 
 export default app;
