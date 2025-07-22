@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:3000";
+// In Docker/production, the API is served from the same origin
+const API_BASE = process.env.REACT_APP_API_URL || window.location.origin;
 
 export async function getSensors() {
   const res = await axios.get(`${API_BASE}/sensors`);
