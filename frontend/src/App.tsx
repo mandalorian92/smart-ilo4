@@ -14,7 +14,8 @@ import {
   IconButton,
   Tooltip,
   Chip,
-  Badge
+  Badge,
+  Grid
 } from "@mui/material";
 import { 
   Home as HomeIcon,
@@ -34,6 +35,7 @@ import Dashboard from "./components/Dashboard";
 import HistoryChart from "./components/HistoryChart";
 import FanControls from "./components/FanControls";
 import DebugTerminal from "./components/DebugTerminal";
+import InformationCard from "./components/InformationCard";
 import SplashScreen from "./components/SplashScreen";
 import HPELogo from "./components/HPELogo";
 import LoginPage from "./components/LoginPage";
@@ -374,15 +376,26 @@ function AppContent() {
           {/* Accessible Tab Content with Proper ARIA Labels */}
           <Box sx={{ minHeight: 'calc(100vh - 200px)' }}>
             <TabPanel value={tabValue} index={0}>
-              {/* Overview Tab - Temperature History */}
+              {/* Overview Tab - System Information and Temperature History */}
               <Box 
                 role="tabpanel"
                 aria-labelledby="tab-0"
                 aria-describedby="tab-desc-0"
               >
                 <div id="tab-desc-0" className="sr-only">
-                  System overview showing temperature history and trends
+                  System overview showing system information and temperature history
                 </div>
+                
+                {/* Information Card */}
+                <Box sx={{ mb: 4 }}>
+                  <Grid container spacing={{ xs: 2, sm: 3 }}>
+                    <Grid item xs={12} md={6} lg={4}>
+                      <InformationCard />
+                    </Grid>
+                  </Grid>
+                </Box>
+                
+                {/* Temperature History Chart */}
                 <HistoryChart />
               </Box>
             </TabPanel>

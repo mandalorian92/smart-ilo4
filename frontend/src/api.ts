@@ -92,3 +92,22 @@ export async function invalidateFanCache() {
   const res = await axios.post(`${API_BASE}/fans/invalidate-cache`);
   return res.data;
 }
+
+// System Information API
+export interface SystemInformation {
+  model: string;
+  serialNumber: string;
+  iloGeneration: string;
+  systemRom: string;
+  iloFirmware: string;
+}
+
+export async function getSystemInformation(): Promise<SystemInformation> {
+  const res = await axios.get(`${API_BASE}/api/system/info`);
+  return res.data;
+}
+
+export async function refreshSystemInformation(): Promise<SystemInformation> {
+  const res = await axios.post(`${API_BASE}/api/system/info/refresh`);
+  return res.data;
+}
