@@ -105,9 +105,14 @@ const createCustomTheme = (mode: 'light' | 'dark'): Theme => {
       MuiAppBar: {
         styleOverrides: {
           root: {
-            backgroundColor: isDark ? '#008567' : '#17eba0', // Dark theme: HPE Dark Green, Light theme: HPE Bright Green
-            color: '#ffffff',
-            transition: 'background-color 0.3s ease', // Smooth transition when switching themes
+            backgroundColor: isDark ? '#1a1a1a' : '#ffffff', // HPE recommendation: White in light, dark in dark mode
+            color: isDark ? '#ffffff' : '#2c2c2c', // High contrast text
+            borderBottom: `1px solid ${isDark ? '#2e2e2e' : '#e0e0e0'}`, // Subtle border
+            borderRadius: '0 0 12px 12px', // Rounded bottom corners for modern look
+            boxShadow: isDark 
+              ? '0 1px 3px rgba(0, 0, 0, 0.5)' 
+              : '0 1px 3px rgba(0, 0, 0, 0.12)', // Subtle shadow
+            transition: 'background-color 0.3s ease, color 0.3s ease', // Smooth transition when switching themes
           },
         },
       },
@@ -115,9 +120,16 @@ const createCustomTheme = (mode: 'light' | 'dark'): Theme => {
         styleOverrides: {
           root: {
             backgroundColor: isDark ? '#1e1e1e' : '#ffffff',
+            borderRadius: 8, // HPE standard border radius
+            border: `1px solid ${isDark ? '#2e2e2e' : '#e0e0e0'}`,
             boxShadow: isDark 
-              ? '0px 2px 4px rgba(0, 0, 0, 0.3), 0px 1px 10px rgba(0, 0, 0, 0.15)'
-              : '0px 2px 4px rgba(0, 0, 0, 0.1), 0px 1px 10px rgba(0, 0, 0, 0.05)',
+              ? '0px 1px 3px rgba(0, 0, 0, 0.3)'
+              : '0px 1px 3px rgba(0, 0, 0, 0.12)',
+            '&:hover': {
+              boxShadow: isDark 
+                ? '0px 2px 6px rgba(0, 0, 0, 0.4)'
+                : '0px 2px 6px rgba(0, 0, 0, 0.15)',
+            },
           },
         },
       },
@@ -160,6 +172,27 @@ const createCustomTheme = (mode: 'light' | 'dark'): Theme => {
         styleOverrides: {
           root: {
             textTransform: 'none',
+            borderRadius: 4, // HPE standard border radius
+            fontWeight: 600,
+            minHeight: 40,
+            padding: '8px 24px',
+            fontSize: '0.875rem',
+            boxShadow: 'none',
+            '&:hover': {
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.15)',
+            },
+          },
+          contained: {
+            '&:hover': {
+              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.25)',
+            },
+          },
+          outlined: {
+            borderWidth: 2,
+            '&:hover': {
+              borderWidth: 2,
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)',
+            },
           },
         },
       },
@@ -171,11 +204,120 @@ const createCustomTheme = (mode: 'light' | 'dark'): Theme => {
           },
         },
       },
+      MuiTextField: {
+        styleOverrides: {
+          root: {
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 4, // HPE standard border radius
+              '& fieldset': {
+                borderWidth: 2,
+                borderColor: isDark ? '#3e3e3e' : '#d0d0d0',
+              },
+              '&:hover fieldset': {
+                borderColor: currentColors.green,
+                borderWidth: 2,
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: currentColors.green,
+                borderWidth: 2,
+              },
+            },
+          },
+        },
+      },
+      MuiPaper: {
+        styleOverrides: {
+          root: {
+            borderRadius: 8, // HPE standard border radius
+            backgroundColor: isDark ? '#1e1e1e' : '#ffffff',
+          },
+          outlined: {
+            border: `1px solid ${isDark ? '#2e2e2e' : '#e0e0e0'}`,
+          },
+        },
+      },
     },
     typography: {
-      fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+      fontFamily: '"MetricHPE", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"',
+      h1: {
+        fontWeight: 600,
+        fontSize: '2.125rem',
+        lineHeight: 1.2,
+        letterSpacing: '-0.01562em',
+      },
+      h2: {
+        fontWeight: 600,
+        fontSize: '1.5rem',
+        lineHeight: 1.3,
+        letterSpacing: '-0.00833em',
+      },
+      h3: {
+        fontWeight: 600,
+        fontSize: '1.25rem',
+        lineHeight: 1.4,
+        letterSpacing: '0em',
+      },
+      h4: {
+        fontWeight: 600,
+        fontSize: '1.125rem',
+        lineHeight: 1.4,
+        letterSpacing: '0.00735em',
+      },
+      h5: {
+        fontWeight: 600,
+        fontSize: '1rem',
+        lineHeight: 1.5,
+        letterSpacing: '0em',
+      },
       h6: {
         fontWeight: 600,
+        fontSize: '0.875rem',
+        lineHeight: 1.5,
+        letterSpacing: '0.0075em',
+      },
+      subtitle1: {
+        fontWeight: 500,
+        fontSize: '1rem',
+        lineHeight: 1.5,
+        letterSpacing: '0.00938em',
+      },
+      subtitle2: {
+        fontWeight: 500,
+        fontSize: '0.875rem',
+        lineHeight: 1.5,
+        letterSpacing: '0.00714em',
+      },
+      body1: {
+        fontWeight: 400,
+        fontSize: '1rem',
+        lineHeight: 1.6,
+        letterSpacing: '0.00938em',
+      },
+      body2: {
+        fontWeight: 400,
+        fontSize: '0.875rem',
+        lineHeight: 1.5,
+        letterSpacing: '0.01071em',
+      },
+      button: {
+        fontWeight: 600,
+        fontSize: '0.875rem',
+        lineHeight: 1.5,
+        letterSpacing: '0.02857em',
+        textTransform: 'none',
+      },
+      caption: {
+        fontWeight: 400,
+        fontSize: '0.75rem',
+        lineHeight: 1.4,
+        letterSpacing: '0.03333em',
+      },
+      overline: {
+        fontWeight: 600,
+        fontSize: '0.75rem',
+        lineHeight: 1.4,
+        letterSpacing: '0.08333em',
+        textTransform: 'uppercase',
       },
     },
   });

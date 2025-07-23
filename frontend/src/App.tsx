@@ -6,15 +6,15 @@ import Dashboard from "./components/Dashboard";
 import HistoryChart from "./components/HistoryChart";
 import FanControls from "./components/FanControls";
 import SplashScreen from "./components/SplashScreen";
+import HPELogo from "./components/HPELogo";
 
 function AppContent() {
   return (
     <Box>
-      <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            iLO4 Fan Controller Dashboard
-          </Typography>
+      <AppBar position="static" elevation={1}>
+        <Toolbar sx={{ minHeight: 64, px: 3 }}>
+                      <HPELogo height={54} />
+          <Box sx={{ flexGrow: 1 }} />
           <ThemeToggle />
         </Toolbar>
       </AppBar>

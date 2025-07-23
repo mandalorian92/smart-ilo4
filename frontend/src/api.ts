@@ -73,6 +73,11 @@ export async function getFanGroupInfo() {
   return res.data;
 }
 
+export async function setSensorLowLimit(sensorId: number, lowLimit: number) {
+  const res = await axios.post(`${API_BASE}/sensors/set-low-limit`, { sensorId, lowLimit });
+  return res.data;
+}
+
 export async function invalidateFanCache() {
   const res = await axios.post(`${API_BASE}/fans/invalidate-cache`);
   return res.data;

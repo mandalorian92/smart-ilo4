@@ -2,12 +2,11 @@ import React, { useEffect, useState } from "react";
 import { 
   getSensors, 
   getFans, 
-  overrideSensor, 
-  resetSensors, 
   setAllFanSpeeds,
   unlockFanControl,
   lockFanAtSpeed,
-  invalidateFanCache
+  invalidateFanCache,
+  setSensorLowLimit
 } from "../api";
 import { 
   Card, 
@@ -475,17 +474,33 @@ function FanControls() {
   );
 }
 
-function SensorControls() {
+function SafeSensorLimits() {
   const [sensors, setSensors] = useState<any[]>([]);
-  const [selected, setSelected] = useState<string>("");
-  const [value, setValue] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [selectedSensor, setSelectedSensor] = useState("");
+  const [lowLimit, setLowLimit] = useState(20); // Now in percentage (20%)
+  const [notification, setNotification] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'info' | 'warning';
+  }>({ open: false, message: '', severity: 'info' });
 
   useEffect(() => {
     async function fetchSensors() {
       try {
         const data = await getSensors();
-        setSensors(data);
+        // Filter out CPU, RAM, and Power Supply sensors
+        const safeSensors = data.filter((sensor: any) => {
+          const name = sensor.name.toLowerCase();
+          return !name.includes('cpu') && 
+                 !name.includes('ram') && 
+                 !name.includes('memory') &&
+                 !name.includes('power') &&
+                 !name.includes('pwr') &&
+                 !name.includes('supply') &&
+                 !name.includes('dimm');
+        });
+        setSensors(safeSensors);
       } catch (error) {
         console.error('Failed to fetch sensors:', error);
       } finally {
@@ -495,86 +510,157 @@ function SensorControls() {
     fetchSensors();
   }, []);
 
-  const handleOverride = async () => {
-    if (!selected) return;
+  const handleSetLowLimit = async () => {
+    if (!selectedSensor) {
+      setNotification({
+        open: true,
+        message: 'Please select a sensor first',
+        severity: 'warning'
+      });
+      return;
+    }
+
     try {
-      await overrideSensor(selected, value);
-      alert("Sensor overridden successfully");
+      // Extract sensor ID from the sensor name or use a mapping
+      // For now, we'll use the sensor index or name as ID
+      const sensorIndex = sensors.findIndex(s => s.name === selectedSensor);
+      const sensorId = sensorIndex + 1; // Assuming 1-based indexing
+      
+      // Multiply by 100 for iLO command (20% becomes 2000)
+      const iloValue = lowLimit * 100;
+      
+      await setSensorLowLimit(sensorId, iloValue);
+      setNotification({
+        open: true,
+        message: `Low limit set to ${lowLimit}% for ${selectedSensor}`,
+        severity: 'success'
+      });
     } catch (error) {
-      alert("Failed to override sensor");
+      console.error('Failed to set low limit:', error);
+      setNotification({
+        open: true,
+        message: 'Failed to set sensor low limit',
+        severity: 'error'
+      });
     }
   };
 
-  const handleReset = async () => {
-    try {
-      await resetSensors();
-      alert("All sensor overrides reset");
-    } catch (error) {
-      alert("Failed to reset sensors");
-    }
+  const handleCloseNotification = () => {
+    setNotification({ ...notification, open: false });
   };
 
   if (loading) return <CircularProgress />;
 
   return (
-    <Card sx={{ mb: 4 }}>
-      <CardContent>
-        <Typography variant="h5" gutterBottom>
-          Override Sensors / Reset
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Override temperature sensor readings for testing automation logic. 
-          Values are in Celsius (e.g., 35, 40, 60).
-        </Typography>
-        
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} sm={4}>
-            <FormControl fullWidth>
-              <InputLabel>Select Sensor</InputLabel>
-              <Select
-                value={selected}
-                label="Select Sensor"
-                onChange={(e) => setSelected(e.target.value)}
-              >
-                {sensors.map((sensor) => (
-                  <MenuItem key={sensor.name} value={sensor.name}>
-                    {sensor.name} ({sensor.reading}°C)
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={12} sm={3}>
-            <TextField
-              label="Override Value"
-              type="number"
-              value={value}
-              onChange={(e) => setValue(parseInt(e.target.value) || 0)}
-              fullWidth
-              inputProps={{ min: 0, max: 100 }}
-              helperText="Temperature in °C"
-            />
-          </Grid>
-          <Grid item xs={12} sm={5}>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
-                variant="contained"
-                onClick={handleOverride}
-                disabled={!selected}
-              >
-                Override
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={handleReset}
-              >
-                Reset Sensors
-              </Button>
-            </Box>
-          </Grid>
-        </Grid>
-      </CardContent>
-    </Card>
+    <>
+      <Card sx={{ mb: 4 }}>
+        <CardContent sx={{ p: 3 }}>
+          {/* Header Section */}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h5" gutterBottom sx={{ mb: 1, fontWeight: 600 }}>
+              Sensor Configuration
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 0 }}>
+              Configure threshold limits for environmental sensors
+            </Typography>
+          </Box>
+
+          {/* Form Section */}
+          <Box component="form" noValidate>
+            <Grid container spacing={3}>
+              {/* Sensor Selection */}
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel id="sensor-select-label">Sensor</InputLabel>
+                  <Select
+                    labelId="sensor-select-label"
+                    value={selectedSensor}
+                    label="Sensor"
+                    onChange={(e) => setSelectedSensor(e.target.value)}
+                    sx={{ 
+                      '& .MuiSelect-select': {
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1
+                      }
+                    }}
+                  >
+                    {sensors.map((sensor) => (
+                      <MenuItem key={sensor.name} value={sensor.name}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {sensor.name}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            ({sensor.reading}°C)
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* Low Limit Input */}
+              <Grid item xs={12} md={3}>
+                <TextField
+                  label="Low Limit"
+                  type="number"
+                  value={lowLimit}
+                  onChange={(e) => setLowLimit(parseInt(e.target.value) || 20)}
+                  fullWidth
+                  variant="outlined"
+                  InputProps={{
+                    endAdornment: <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>%</Typography>
+                  }}
+                  inputProps={{ min: 10, max: 100, step: 1 }}
+                  sx={{
+                    '& .MuiInputBase-input': {
+                      textAlign: 'right',
+                      pr: 0.5
+                    }
+                  }}
+                />
+              </Grid>
+
+              {/* Action Button */}
+              <Grid item xs={12} md={3} sx={{ display: 'flex', alignItems: 'end' }}>
+                <Button
+                  variant="contained"
+                  onClick={handleSetLowLimit}
+                  disabled={!selectedSensor}
+                  fullWidth
+                  sx={{ 
+                    height: 56, // Match input field height
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    fontSize: '0.875rem'
+                  }}
+                >
+                  Apply Changes
+                </Button>
+              </Grid>
+            </Grid>
+          </Box>
+        </CardContent>
+      </Card>
+      
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert 
+          onClose={handleCloseNotification} 
+          severity={notification.severity}
+          sx={{ width: '100%' }}
+          variant="filled"
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
+    </>
   );
 }
 
@@ -582,7 +668,7 @@ export default function Controls() {
   return (
     <Box>
       <FanControls />
-      <SensorControls />
+      <SafeSensorLimits />
     </Box>
   );
 }

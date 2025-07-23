@@ -4,6 +4,19 @@
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    
+    <!-- HPE MetricHPE Font (fallback to system fonts if not available) -->
+    <style>
+      @font-face {
+        font-family: 'MetricHPE';
+        src: local('MetricHPE'), local('Metric HPE');
+        font-display: swap;
+      }
+    </style>
+    
+    <!-- Preload system fonts for better performance -->
+    <link rel="preload" href="data:font/woff2;base64," as="font" type="font/woff2" crossorigin>
+    
     <title>iLO4 Fan Controller Dashboard</title>
   </head>
   <body>
