@@ -7,7 +7,6 @@ import {
   setAllFanSpeeds,
   unlockFanControl,
   lockFanAtSpeed,
-  resetFans,
   invalidateFanCache
 } from "../api";
 import { 
@@ -138,30 +137,6 @@ function FanControls() {
       addDebugLog(`✗ Error: ${errorMsg}`);
       console.error('Failed to update fan speeds:', error);
       showNotification(`Failed to update fan speeds: ${errorMsg}`, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleReset = async () => {
-    try {
-      setLoading(true);
-      addDebugLog('Resetting fan overrides...');
-      await resetFans();
-      
-      // Reset to original speeds
-      const originalSpeeds: Record<string, number> = {};
-      fans.forEach(fan => originalSpeeds[fan.name] = Math.max(10, fan.speed));
-      setFanSpeeds(originalSpeeds);
-      
-      addDebugLog('✓ Fan overrides reset successfully');
-      showNotification('Fan overrides reset successfully', 'success');
-      await fetchFans();
-    } catch (error) {
-      const errorMsg = (error as any).response?.data?.error || (error as Error).message;
-      addDebugLog(`✗ Reset error: ${errorMsg}`);
-      console.error('Failed to reset fans:', error);
-      showNotification(`Failed to reset fans: ${errorMsg}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -315,14 +290,6 @@ function FanControls() {
             sx={{ bgcolor: '#27ae60', '&:hover': { bgcolor: '#229954' } }}
           >
             {loading ? <CircularProgress size={20} sx={{ color: 'white' }} /> : 'Update'}
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleReset}
-            disabled={loading}
-            sx={{ bgcolor: '#3498db', '&:hover': { bgcolor: '#2980b9' } }}
-          >
-            Reset
           </Button>
           <Button
             variant="contained"
