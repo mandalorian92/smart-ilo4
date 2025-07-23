@@ -15,7 +15,8 @@ import {
   OutlinedInput,
   SelectChangeEvent,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  useMediaQuery
 } from "@mui/material";
 import { Line } from "react-chartjs-2";
 import {
@@ -69,6 +70,8 @@ function HistoryChart() {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [showFahrenheit, setShowFahrenheit] = useState(false);
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
 
   // Generate distinct colors for each sensor line
   const generateColors = (count: number) => {
@@ -227,15 +230,26 @@ function HistoryChart() {
     plugins: {
       legend: {
         position: 'top' as const,
+        display: !isMobile, // Hide legend on mobile to save space
         labels: {
           color: theme.palette.text.primary,
           usePointStyle: true,
-          padding: 20
+          padding: isMobile ? 10 : 20,
+          font: {
+            size: isMobile ? 10 : 12
+          },
+          boxWidth: isMobile ? 10 : 20
         }
       },
       tooltip: {
         mode: 'index' as const,
         intersect: false,
+        titleFont: {
+          size: isMobile ? 12 : 14
+        },
+        bodyFont: {
+          size: isMobile ? 11 : 13
+        },
         callbacks: {
           label: function(context: any) {
             const sensorName = context.dataset.label;
@@ -249,27 +263,40 @@ function HistoryChart() {
       x: {
         display: true,
         title: {
-          display: true,
+          display: !isMobile, // Hide axis titles on mobile
           text: 'Time',
-          color: theme.palette.text.primary
+          color: theme.palette.text.primary,
+          font: {
+            size: isMobile ? 10 : 12
+          }
         },
         ticks: {
           color: theme.palette.text.secondary,
-          maxRotation: 45
+          maxRotation: isMobile ? 45 : 30,
+          font: {
+            size: isMobile ? 9 : 11
+          }
         },
         grid: {
           color: theme.palette.divider,
+          display: !isMobile // Hide grid on mobile for cleaner look
         }
       },
       y: {
         display: true,
         title: {
-          display: true,
+          display: !isMobile,
           text: `Temperature (${getTemperatureUnit()})`,
-          color: theme.palette.text.primary
+          color: theme.palette.text.primary,
+          font: {
+            size: isMobile ? 10 : 12
+          }
         },
         ticks: {
           color: theme.palette.text.secondary,
+          font: {
+            size: isMobile ? 9 : 11
+          }
         },
         grid: {
           color: theme.palette.divider,
@@ -279,14 +306,35 @@ function HistoryChart() {
     interaction: {
       mode: 'index' as const,
       intersect: false,
+    },
+    elements: {
+      point: {
+        radius: isMobile ? 2 : 3, // Smaller points on mobile
+        hoverRadius: isMobile ? 4 : 6
+      },
+      line: {
+        borderWidth: isMobile ? 1.5 : 2 // Thinner lines on mobile
+      }
     }
   };
 
   return (
-    <Card sx={{ mb: 4 }}>
-      <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h6">
+    <Card>
+      <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', sm: 'row' },
+          justifyContent: 'space-between', 
+          alignItems: { xs: 'flex-start', sm: 'center' }, 
+          mb: 3,
+          gap: { xs: 2, sm: 0 }
+        }}>
+          <Typography 
+            variant="h6"
+            sx={{ 
+              fontSize: { xs: '1rem', sm: '1.125rem' }
+            }}
+          >
             Temperature History (Past Hour)
           </Typography>
           <FormControlLabel
@@ -294,21 +342,29 @@ function HistoryChart() {
               <Switch 
                 checked={showFahrenheit} 
                 onChange={(e) => setShowFahrenheit(e.target.checked)}
-                size="small"
+                size={isMobile ? "small" : "medium"}
               />
             }
-            label="Show in Fahrenheit"
+            label={
+              <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                {isMobile ? "°F" : "Show in Fahrenheit"}
+              </Typography>
+            }
+            sx={{ m: 0 }}
           />
         </Box>
         
         <Box sx={{ mb: 3 }}>
           <FormControl fullWidth>
-            <InputLabel>Select Sensors to Display</InputLabel>
+            <InputLabel sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
+              {isMobile ? "Select Sensors" : "Select Sensors to Display"}
+            </InputLabel>
             <Select
               multiple
               value={selectedSensors}
               onChange={handleSensorChange}
-              input={<OutlinedInput label="Select Sensors to Display" />}
+              input={<OutlinedInput label={isMobile ? "Select Sensors" : "Select Sensors to Display"} />}
+              size={isMobile ? "small" : "medium"}
               renderValue={(selected) => (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                   {selected.map((value) => {
@@ -316,9 +372,12 @@ function HistoryChart() {
                     return (
                       <Chip 
                         key={value} 
-                        label={`${value} (${sensor?.context || 'Unknown'})`}
+                        label={isMobile ? value : `${value} (${sensor?.context || 'Unknown'})`}
                         size="small"
-                        sx={{ fontSize: '0.75rem' }}
+                        sx={{ 
+                          fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                          height: { xs: 20, sm: 24 }
+                        }}
                       />
                     );
                   })}
@@ -328,10 +387,14 @@ function HistoryChart() {
               {availableSensors.map((sensor) => (
                 <MenuItem key={sensor.name} value={sensor.name}>
                   <Box>
-                    <Typography variant="body2">
+                    <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
                       {sensor.name}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography 
+                      variant="caption" 
+                      color="text.secondary"
+                      sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                    >
                       {sensor.context} - Current: {convertTemperature(sensor.currentReading)}{getTemperatureUnit()}
                     </Typography>
                   </Box>
@@ -341,9 +404,34 @@ function HistoryChart() {
           </FormControl>
         </Box>
         
-        <Box sx={{ height: 400 }}>
+        <Box sx={{ 
+          height: { xs: 300, sm: 350, md: 400 },
+          position: 'relative'
+        }}>
           <Line data={chartData} options={chartOptions} />
         </Box>
+        
+        {/* Show legend separately on mobile */}
+        {isMobile && selectedSensors.length > 0 && (
+          <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {selectedSensors.map((sensorName, index) => {
+              const colors = generateColors(selectedSensors.length);
+              return (
+                <Chip
+                  key={sensorName}
+                  label={sensorName}
+                  size="small"
+                  sx={{
+                    backgroundColor: colors[index],
+                    color: 'white',
+                    fontSize: '0.7rem',
+                    height: 20
+                  }}
+                />
+              );
+            })}
+          </Box>
+        )}
       </CardContent>
     </Card>
   );

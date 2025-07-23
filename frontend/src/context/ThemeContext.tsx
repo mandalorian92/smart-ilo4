@@ -59,6 +59,16 @@ const createCustomTheme = (mode: 'light' | 'dark'): Theme => {
   const currentColors = isDark ? hpeColors.dark : hpeColors.light;
   
   return createTheme({
+    breakpoints: {
+      values: {
+        xs: 0,     // Mobile devices
+        sm: 600,   // Small tablets
+        md: 900,   // Large tablets / Small laptops
+        lg: 1200,  // Desktop
+        xl: 1536,  // Large screens
+      },
+    },
+    spacing: 8, // Base spacing unit (8px)
     palette: {
       mode,
       primary: {
@@ -244,80 +254,110 @@ const createCustomTheme = (mode: 'light' | 'dark'): Theme => {
         fontSize: '2.125rem',
         lineHeight: 1.2,
         letterSpacing: '-0.01562em',
+        '@media (max-width:600px)': {
+          fontSize: '1.75rem',
+        },
       },
       h2: {
         fontWeight: 600,
         fontSize: '1.5rem',
         lineHeight: 1.3,
         letterSpacing: '-0.00833em',
+        '@media (max-width:600px)': {
+          fontSize: '1.25rem',
+        },
       },
       h3: {
         fontWeight: 600,
         fontSize: '1.25rem',
         lineHeight: 1.4,
         letterSpacing: '0em',
+        '@media (max-width:600px)': {
+          fontSize: '1.125rem',
+        },
       },
       h4: {
         fontWeight: 600,
         fontSize: '1.125rem',
         lineHeight: 1.4,
         letterSpacing: '0.00735em',
+        '@media (max-width:600px)': {
+          fontSize: '1rem',
+        },
       },
       h5: {
         fontWeight: 600,
         fontSize: '1rem',
         lineHeight: 1.5,
         letterSpacing: '0em',
+        '@media (max-width:600px)': {
+          fontSize: '0.9rem',
+        },
       },
       h6: {
         fontWeight: 600,
         fontSize: '0.875rem',
         lineHeight: 1.5,
         letterSpacing: '0.0075em',
+        '@media (max-width:600px)': {
+          fontSize: '0.8rem',
+        },
       },
       subtitle1: {
         fontWeight: 500,
         fontSize: '1rem',
         lineHeight: 1.5,
-        letterSpacing: '0.00938em',
+        '@media (max-width:600px)': {
+          fontSize: '0.9rem',
+        },
       },
       subtitle2: {
         fontWeight: 500,
         fontSize: '0.875rem',
         lineHeight: 1.5,
-        letterSpacing: '0.00714em',
+        '@media (max-width:600px)': {
+          fontSize: '0.8rem',
+        },
       },
       body1: {
-        fontWeight: 400,
         fontSize: '1rem',
-        lineHeight: 1.6,
-        letterSpacing: '0.00938em',
+        lineHeight: 1.5,
+        '@media (max-width:600px)': {
+          fontSize: '0.9rem',
+        },
       },
       body2: {
-        fontWeight: 400,
         fontSize: '0.875rem',
         lineHeight: 1.5,
-        letterSpacing: '0.01071em',
+        '@media (max-width:600px)': {
+          fontSize: '0.8rem',
+        },
       },
       button: {
-        fontWeight: 600,
+        fontWeight: 500,
         fontSize: '0.875rem',
-        lineHeight: 1.5,
+        lineHeight: 1.75,
         letterSpacing: '0.02857em',
-        textTransform: 'none',
+        textTransform: 'none' as const,
+        '@media (max-width:600px)': {
+          fontSize: '0.8rem',
+        },
       },
       caption: {
-        fontWeight: 400,
         fontSize: '0.75rem',
-        lineHeight: 1.4,
-        letterSpacing: '0.03333em',
+        lineHeight: 1.66,
+        '@media (max-width:600px)': {
+          fontSize: '0.7rem',
+        },
       },
       overline: {
-        fontWeight: 600,
         fontSize: '0.75rem',
-        lineHeight: 1.4,
+        lineHeight: 2.66,
         letterSpacing: '0.08333em',
-        textTransform: 'uppercase',
+        textTransform: 'uppercase' as const,
+        '@media (max-width:600px)': {
+          fontSize: '0.7rem',
+        },
       },
     },
   });

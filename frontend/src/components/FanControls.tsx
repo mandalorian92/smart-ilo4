@@ -17,7 +17,7 @@ import {
   Select, 
   TextField, 
   Grid, 
-  CircularProgress, 
+  CircularProgress,
   Slider,
   Box,
   FormControl,
@@ -29,10 +29,9 @@ import {
   Paper,
   Alert,
   Snackbar,
-  useTheme
-} from "@mui/material";
-
-function FanControls() {
+  useTheme,
+  useMediaQuery
+} from "@mui/material";function FanControls() {
   const [fans, setFans] = useState<any[]>([]);
   const [fanSpeeds, setFanSpeeds] = useState<Record<string, number>>({});
   const [editAllMode, setEditAllMode] = useState(false);
@@ -45,6 +44,8 @@ function FanControls() {
     severity: 'success' | 'error' | 'info' | 'warning';
   }>({ open: false, message: '', severity: 'info' });
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
 
   const addDebugLog = (message: string) => {
     const timestamp = new Date().toLocaleTimeString();
@@ -93,6 +94,21 @@ function FanControls() {
       turbo: 100  // 100% maximum
     };
     handleGlobalSpeedChange(speedMap[preset]);
+  };
+
+  const applyPreset = (speed: number) => {
+    // Apply the preset speed to all fans
+    setGlobalSpeed(speed);
+    const newSpeeds: Record<string, number> = {};
+    fans.forEach(fan => newSpeeds[fan.name] = speed);
+    setFanSpeeds(newSpeeds);
+    
+    // Enable edit all mode for clarity
+    setEditAllMode(true);
+    
+    // Show notification
+    const presetName = speed === 20 ? 'Quiet' : speed === 45 ? 'Normal' : 'Turbo';
+    showNotification(`${presetName} preset applied (${speed}%)`, 'success');
   };
 
   const handleUpdate = async () => {
@@ -196,9 +212,15 @@ function FanControls() {
 
   return (
     <>
-    <Card sx={{ mb: 4 }}>
-      <CardContent>
-        <Typography variant="h6" sx={{ mb: 3 }}>
+    <Card>
+      <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            mb: 3,
+            fontSize: { xs: '1rem', sm: '1.125rem' }
+          }}
+        >
           Fan Controller
           {loading && <CircularProgress size={20} sx={{ ml: 2 }} />}
         </Typography>
@@ -206,42 +228,53 @@ function FanControls() {
         {/* Control Panel Header */}
         <Box sx={{ 
           display: 'flex', 
+          flexDirection: { xs: 'column', sm: 'row' },
           justifyContent: 'space-between', 
-          alignItems: 'center', 
+          alignItems: { xs: 'stretch', sm: 'center' }, 
           mb: 3,
-          p: 2,
+          p: { xs: 1.5, sm: 2 },
           borderRadius: 2,
           bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
-          border: `1px solid ${theme.palette.divider}`
+          border: `1px solid ${theme.palette.divider}`,
+          gap: { xs: 2, sm: 0 }
         }}>
           <FormControlLabel
             control={
               <Switch 
                 checked={editAllMode} 
                 onChange={(e) => setEditAllMode(e.target.checked)}
-                size="medium"
+                size={isMobile ? "small" : "medium"}
               />
             }
             label={
-              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+              <Typography variant="body1" sx={{ 
+                fontWeight: 500,
+                fontSize: { xs: '0.875rem', sm: '1rem' }
+              }}>
                 Edit All Fans
               </Typography>
             }
           />
           
           {/* Preset Buttons - Modern Chip Style */}
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 1,
+            flexWrap: { xs: 'wrap', sm: 'nowrap' },
+            justifyContent: { xs: 'center', sm: 'flex-end' }
+          }}>
             <Button 
               onClick={() => handlePresetSpeed('quiet')}
               variant="outlined"
-              size="small"
+              size={isMobile ? "small" : "medium"}
               color="info"
               sx={{ 
                 borderRadius: 3,
                 textTransform: 'none',
                 fontWeight: 500,
                 minWidth: 'auto',
-                px: 2
+                px: { xs: 1.5, sm: 2 },
+                fontSize: { xs: '0.75rem', sm: '0.875rem' }
               }}
             >
               Quiet
@@ -249,14 +282,15 @@ function FanControls() {
             <Button 
               onClick={() => handlePresetSpeed('normal')}
               variant="outlined"
-              size="small"
+              size={isMobile ? "small" : "medium"}
               color="success"
               sx={{ 
                 borderRadius: 3,
                 textTransform: 'none',
                 fontWeight: 500,
                 minWidth: 'auto',
-                px: 2
+                px: { xs: 1.5, sm: 2 },
+                fontSize: { xs: '0.75rem', sm: '0.875rem' }
               }}
             >
               Normal
@@ -264,14 +298,15 @@ function FanControls() {
             <Button 
               onClick={() => handlePresetSpeed('turbo')}
               variant="outlined"
-              size="small"
+              size={isMobile ? "small" : "medium"}
               color="error"
               sx={{ 
                 borderRadius: 3,
                 textTransform: 'none',
                 fontWeight: 500,
                 minWidth: 'auto',
-                px: 2
+                px: { xs: 1.5, sm: 2 },
+                fontSize: { xs: '0.75rem', sm: '0.875rem' }
               }}
             >
               Turbo
@@ -296,18 +331,36 @@ function FanControls() {
                     bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.01)'
                   }}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: { xs: 1, sm: 2 }, // Responsive gap
+                    flexDirection: { xs: 'column', sm: 'row' }, // Stack on mobile
+                    '& > *': {
+                      width: { xs: '100%', sm: 'auto' } // Full width on mobile
+                    }
+                  }}>
                     <Typography 
                       variant="body2" 
                       sx={{ 
-                        minWidth: 100, 
+                        minWidth: { xs: 'auto', sm: 100 },
+                        width: { xs: '100%', sm: 'auto' },
+                        textAlign: { xs: 'center', sm: 'left' },
                         fontWeight: 500,
-                        color: theme.palette.text.primary 
+                        color: theme.palette.text.primary,
+                        mb: { xs: 1, sm: 0 }
                       }}
                     >
                       {fan.name}
                     </Typography>
-                    <Slider
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: 2, 
+                      flex: 1,
+                      minWidth: { xs: '100%', sm: 'auto' }
+                    }}>
+                      <Slider
                       value={Math.max(10, fanSpeeds[fan.name] || fan.speed)}
                       onChange={(_, value) => handleFanSpeedChange(fan.name, value as number)}
                       min={10}
@@ -341,7 +394,7 @@ function FanControls() {
                       size="small"
                       variant="outlined"
                       sx={{ 
-                        width: 80,
+                        width: 90, // Increased from 80 to 90
                         '& .MuiOutlinedInput-root': {
                           borderRadius: 2,
                           '& fieldset': { 
@@ -353,12 +406,23 @@ function FanControls() {
                           '&.Mui-focused fieldset': { 
                             borderColor: theme.palette.primary.main 
                           }
+                        },
+                        '& .MuiInputBase-input': {
+                          textAlign: 'center', // Center the text
+                          paddingRight: '8px !important', // Add padding to prevent overlap with arrows
+                          fontSize: '0.875rem'
                         }
                       }}
                       InputProps={{
-                        endAdornment: <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mr: 1 }}>%</Typography>
+                        endAdornment: <Typography variant="body2" sx={{ 
+                          color: theme.palette.text.secondary, 
+                          mr: 0.5, // Reduced margin
+                          fontSize: '0.75rem', // Smaller font for %
+                          minWidth: '12px' // Ensure consistent width
+                        }}>%</Typography>
                       }}
                     />
+                    </Box>
                   </Box>
                 </Paper>
               </Grid>
@@ -366,10 +430,88 @@ function FanControls() {
           </Grid>
         </Box>
 
+        {/* Preset Buttons */}
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 1, 
+          justifyContent: 'center',
+          pt: 2,
+          pb: 1,
+          flexWrap: { xs: 'wrap', sm: 'nowrap' }
+        }}>
+          <Button
+            variant="outlined"
+            onClick={() => applyPreset(20)}
+            disabled={loading}
+            size={isMobile ? "small" : "medium"}
+            sx={{ 
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 500,
+              px: { xs: 1.5, sm: 2 },
+              minWidth: { xs: 70, sm: 80 },
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              color: theme.palette.info.main,
+              borderColor: theme.palette.info.main,
+              '&:hover': {
+                borderColor: theme.palette.info.dark,
+                backgroundColor: theme.palette.info.main + '10'
+              }
+            }}
+          >
+            Quiet (20%)
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => applyPreset(45)}
+            disabled={loading}
+            size={isMobile ? "small" : "medium"}
+            sx={{ 
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 500,
+              px: { xs: 1.5, sm: 2 },
+              minWidth: { xs: 70, sm: 80 },
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              color: theme.palette.warning.main,
+              borderColor: theme.palette.warning.main,
+              '&:hover': {
+                borderColor: theme.palette.warning.dark,
+                backgroundColor: theme.palette.warning.main + '10'
+              }
+            }}
+          >
+            Normal (45%)
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => applyPreset(95)}
+            disabled={loading}
+            size={isMobile ? "small" : "medium"}
+            sx={{ 
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 500,
+              px: { xs: 1.5, sm: 2 },
+              minWidth: { xs: 70, sm: 80 },
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              color: theme.palette.error.main,
+              borderColor: theme.palette.error.main,
+              '&:hover': {
+                borderColor: theme.palette.error.dark,
+                backgroundColor: theme.palette.error.main + '10'
+              }
+            }}
+          >
+            Turbo (95%)
+          </Button>
+        </Box>
+
         {/* Action Buttons - Modern Layout */}
         <Box sx={{ 
           display: 'flex', 
-          gap: 2, 
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: { xs: 1.5, sm: 2 }, 
           justifyContent: 'flex-end',
           pt: 2,
           borderTop: `1px solid ${theme.palette.divider}`
@@ -378,12 +520,13 @@ function FanControls() {
             variant="outlined"
             onClick={handleUnlock}
             disabled={loading}
-            size="large"
+            size={isMobile ? "medium" : "large"}
             sx={{ 
               borderRadius: 2,
               textTransform: 'none',
               fontWeight: 500,
-              px: 3
+              px: 3,
+              fontSize: { xs: '0.875rem', sm: '1rem' }
             }}
           >
             Unlock Fans
@@ -392,13 +535,14 @@ function FanControls() {
             variant="contained"
             onClick={handleUpdate}
             disabled={loading}
-            size="large"
+            size={isMobile ? "medium" : "large"}
             sx={{ 
               borderRadius: 2,
               textTransform: 'none',
               fontWeight: 500,
               px: 3,
               boxShadow: 2,
+              fontSize: { xs: '0.875rem', sm: '1rem' },
               '&:hover': {
                 boxShadow: 4
               }

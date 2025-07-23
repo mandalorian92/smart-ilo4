@@ -16,7 +16,9 @@ import {
   Chip,
   Switch,
   FormControlLabel,
-  useTheme
+  useTheme,
+  useMediaQuery,
+  Grid
 } from "@mui/material";
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningIcon from '@mui/icons-material/Warning';
@@ -28,6 +30,8 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [showFahrenheit, setShowFahrenheit] = useState(false);
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
 
   useEffect(() => {
     async function fetchData() {
@@ -103,127 +107,261 @@ function Dashboard() {
   const filteredSensors = sensors;
   const filteredFans = fans;
 
-  if (loading) return <CircularProgress />;
+  if (loading) return (
+    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+      <CircularProgress />
+    </Box>
+  );
 
   return (
-    <Box>
+    <Grid container spacing={{ xs: 2, sm: 3, md: 4 }}>
       {/* Fans Table */}
-      <Card sx={{ mb: 4 }}>
-        <CardContent>
-          <Typography variant="h6" sx={{ mb: 2 }}>
-            Fans
-          </Typography>
-          
-          <TableContainer component={Paper} variant="outlined">
-            <Table size="small">
-              <TableHead>
-                <TableRow sx={{ backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : theme.palette.grey[100] }}>
-                  <TableCell><strong>Fan</strong></TableCell>
-                  <TableCell><strong>Location</strong></TableCell>
-                  <TableCell align="center"><strong>Status</strong></TableCell>
-                  <TableCell align="right"><strong>Speed</strong></TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredFans.map((fan, index) => (
-                  <TableRow key={fan.name} sx={{ 
-                    '&:nth-of-type(even)': { 
-                      backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[900] : theme.palette.grey[50] 
-                    },
-                    '&:hover': {
-                      backgroundColor: theme.palette.action.hover,
-                    }
-                  }}>
-                    <TableCell>{fan.name}</TableCell>
-                    <TableCell>System</TableCell>
-                    <TableCell align="center">
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                        {getFanStatusIcon(fan)}
-                        <Typography variant="body2">
-                          {fan.health === 'OK' ? 'OK' : fan.status}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell align="right">{fan.speed}%</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </CardContent>
-      </Card>
-
-      {/* Sensor Data Table */}
-      <Card sx={{ mb: 4 }}>
-        <CardContent>
-          <Typography variant="h6" sx={{ mb: 2 }}>
-            Sensor Data
-          </Typography>
-
-          <Box sx={{ mb: 2 }}>
-            <FormControlLabel
-              control={
-                <Switch 
-                  checked={showFahrenheit} 
-                  onChange={(e) => setShowFahrenheit(e.target.checked)}
-                  size="small"
-                />
-              }
-              label="Show values in Fahrenheit"
-            />
-          </Box>
-          
-          <TableContainer component={Paper} variant="outlined">
-            <Table size="small">
-              <TableHead>
-                <TableRow sx={{ backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : theme.palette.grey[100] }}>
-                  <TableCell><strong>Sensor</strong></TableCell>
-                  <TableCell><strong>Location</strong></TableCell>
-                  <TableCell align="center"><strong>Status</strong></TableCell>
-                  <TableCell align="right"><strong>Reading</strong></TableCell>
-                  <TableCell><strong>Thresholds</strong></TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredSensors.map((sensor, index) => (
-                  <TableRow key={sensor.name} sx={{ 
-                    '&:nth-of-type(even)': { 
-                      backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[900] : theme.palette.grey[50] 
-                    },
-                    '&:hover': {
-                      backgroundColor: theme.palette.action.hover,
-                    }
-                  }}>
-                    <TableCell>{sensor.name}</TableCell>
+      <Grid item xs={12} lg={6}>
+        <Card sx={{ height: 'fit-content' }}>
+          <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                mb: 2,
+                fontSize: { xs: '1rem', sm: '1.125rem' }
+              }}
+            >
+              Fans
+            </Typography>
+            
+            <TableContainer 
+              component={Paper} 
+              variant="outlined"
+              sx={{
+                '& .MuiTable-root': {
+                  minWidth: { xs: 'auto', sm: 650 }
+                }
+              }}
+            >
+              <Table size={isMobile ? "small" : "medium"}>
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : theme.palette.grey[100] }}>
                     <TableCell>
-                      {sensor.context === 'CPU' ? 'CPU' : 
-                       sensor.context === 'Intake' ? 'Ambient' :
-                       sensor.context === 'SystemBoard' ? 'System' :
-                       sensor.context === 'PowerSupply' ? 'Power Supply' :
-                       sensor.context || 'System'}
+                      <Typography variant="subtitle2" fontWeight="bold">
+                        Fan
+                      </Typography>
                     </TableCell>
-                    <TableCell align="center">
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                        {getStatusIcon(sensor)}
-                        <Typography variant="body2">
-                          {sensor.status === 'OK' ? 'OK' : sensor.status}
+                    {!isMobile && (
+                      <TableCell>
+                        <Typography variant="subtitle2" fontWeight="bold">
+                          Location
                         </Typography>
-                      </Box>
+                      </TableCell>
+                    )}
+                    <TableCell align="center">
+                      <Typography variant="subtitle2" fontWeight="bold">
+                        Status
+                      </Typography>
                     </TableCell>
                     <TableCell align="right">
-                      {convertTemperature(sensor.reading)}{getTemperatureUnit()}
-                    </TableCell>
-                    <TableCell sx={{ fontSize: '0.875rem' }}>
-                      {formatThresholds(sensor)}
+                      <Typography variant="subtitle2" fontWeight="bold">
+                        Speed
+                      </Typography>
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </CardContent>
-      </Card>
-    </Box>
+                </TableHead>
+                <TableBody>
+                  {filteredFans.map((fan, index) => (
+                    <TableRow key={fan.name} sx={{ 
+                      '&:nth-of-type(even)': { 
+                        backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[900] : theme.palette.grey[50] 
+                      },
+                      '&:hover': {
+                        backgroundColor: theme.palette.action.hover,
+                      }
+                    }}>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ 
+                          fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                          fontWeight: 500
+                        }}>
+                          {fan.name}
+                        </Typography>
+                      </TableCell>
+                      {!isMobile && (
+                        <TableCell>
+                          <Typography variant="body2">System</Typography>
+                        </TableCell>
+                      )}
+                      <TableCell align="center">
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                          {getFanStatusIcon(fan)}
+                          {!isMobile && (
+                            <Typography variant="body2">
+                              {fan.health === 'OK' ? 'OK' : fan.status}
+                            </Typography>
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body2" fontWeight="600">
+                          {fan.speed}%
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      {/* Sensor Data Table */}
+      <Grid item xs={12} lg={6}>
+        <Card sx={{ height: 'fit-content' }}>
+          <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: { xs: 'column', sm: 'row' },
+              justifyContent: 'space-between',
+              alignItems: { xs: 'flex-start', sm: 'center' },
+              mb: 2,
+              gap: { xs: 1, sm: 0 }
+            }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontSize: { xs: '1rem', sm: '1.125rem' }
+                }}
+              >
+                Sensor Data
+              </Typography>
+
+              <FormControlLabel
+                control={
+                  <Switch 
+                    checked={showFahrenheit} 
+                    onChange={(e) => setShowFahrenheit(e.target.checked)}
+                    size={isMobile ? "small" : "medium"}
+                  />
+                }
+                label={
+                  <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                    {isMobile ? "°F" : "Show values in Fahrenheit"}
+                  </Typography>
+                }
+                sx={{ m: 0 }}
+              />
+            </Box>
+            
+            <TableContainer 
+              component={Paper} 
+              variant="outlined"
+              sx={{
+                '& .MuiTable-root': {
+                  minWidth: { xs: 'auto', sm: 650 }
+                }
+              }}
+            >
+              <Table size={isMobile ? "small" : "medium"}>
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : theme.palette.grey[100] }}>
+                    <TableCell>
+                      <Typography variant="subtitle2" fontWeight="bold">
+                        Sensor
+                      </Typography>
+                    </TableCell>
+                    {!isMobile && (
+                      <TableCell>
+                        <Typography variant="subtitle2" fontWeight="bold">
+                          Location
+                        </Typography>
+                      </TableCell>
+                    )}
+                    <TableCell align="center">
+                      <Typography variant="subtitle2" fontWeight="bold">
+                        Status
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="subtitle2" fontWeight="bold">
+                        Reading
+                      </Typography>
+                    </TableCell>
+                    {!isMobile && !isTablet && (
+                      <TableCell>
+                        <Typography variant="subtitle2" fontWeight="bold">
+                          Thresholds
+                        </Typography>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredSensors.map((sensor, index) => (
+                    <TableRow key={sensor.name} sx={{ 
+                      '&:nth-of-type(even)': { 
+                        backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[900] : theme.palette.grey[50] 
+                      },
+                      '&:hover': {
+                        backgroundColor: theme.palette.action.hover,
+                      }
+                    }}>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ 
+                          fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                          fontWeight: 500
+                        }}>
+                          {sensor.name}
+                        </Typography>
+                        {isMobile && (
+                          <Typography variant="caption" color="text.secondary">
+                            {sensor.context === 'CPU' ? 'CPU' : 
+                             sensor.context === 'Intake' ? 'Ambient' :
+                             sensor.context === 'SystemBoard' ? 'System' :
+                             sensor.context === 'PowerSupply' ? 'Power Supply' :
+                             sensor.context || 'System'}
+                          </Typography>
+                        )}
+                      </TableCell>
+                      {!isMobile && (
+                        <TableCell>
+                          <Typography variant="body2">
+                            {sensor.context === 'CPU' ? 'CPU' : 
+                             sensor.context === 'Intake' ? 'Ambient' :
+                             sensor.context === 'SystemBoard' ? 'System' :
+                             sensor.context === 'PowerSupply' ? 'Power Supply' :
+                             sensor.context || 'System'}
+                          </Typography>
+                        </TableCell>
+                      )}
+                      <TableCell align="center">
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                          {getStatusIcon(sensor)}
+                          {!isMobile && (
+                            <Typography variant="body2">
+                              {sensor.status === 'OK' ? 'OK' : sensor.status}
+                            </Typography>
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body2" fontWeight="600">
+                          {convertTemperature(sensor.reading)}{getTemperatureUnit()}
+                        </Typography>
+                      </TableCell>
+                      {!isMobile && !isTablet && (
+                        <TableCell>
+                          <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
+                            {formatThresholds(sensor)}
+                          </Typography>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
+      </Grid>
+    </Grid>
   );
 }
 
