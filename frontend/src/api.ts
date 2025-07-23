@@ -13,6 +13,16 @@ export async function getAvailableSensors() {
   return res.data;
 }
 
+export async function getActivePids() {
+  const res = await axios.get(`${API_BASE}/sensors/active-pids`);
+  return res.data;
+}
+
+export async function getAllPids() {
+  const res = await axios.get(`${API_BASE}/sensors/pids`);
+  return res.data;
+}
+
 export async function getFans() {
   const res = await axios.get(`${API_BASE}/fans`);
   return res.data;

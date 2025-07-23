@@ -19,6 +19,21 @@ type Fan = {
   health?: string;
 };
 
+type PidInfo = {
+  number: number;
+  pgain: number;
+  igain: number;
+  dgain: number;
+  setpoint: number;
+  imin: number;
+  imax: number;
+  lowLimit: number;
+  highLimit: number;
+  prevDrive: number;
+  output: number;
+  isActive: boolean; // true if prev_drive > 0 or output > 0
+};
+
 let sensorOverrides: Record<string, number> = {};
 let fanOverrides: Record<string, number> = {};
 // History data structure: store individual sensor readings over time
@@ -30,15 +45,20 @@ type SensorHistoryPoint = {
 
 let history: SensorHistoryPoint[] = [];
 let lastThermalData: any = null;
+let lastPidData: PidInfo[] = [];
 
 // Cache thermal data for 30 seconds to avoid too many API calls
 let lastFetchTime = 0;
+let lastPidFetchTime = 0;
 const CACHE_DURATION = 30000; // 30 seconds
+const PID_CACHE_DURATION = 300000; // 5 minutes for PID data
 
 // Function to invalidate cache (force refresh on next request)
 export function invalidateThermalCache() {
   lastFetchTime = 0;
   lastThermalData = null;
+  lastPidFetchTime = 0;
+  lastPidData = [];
 }
 
 async function getCachedThermalData() {
@@ -55,6 +75,22 @@ async function getCachedThermalData() {
     }
   }
   return lastThermalData;
+}
+
+async function getCachedPidData(): Promise<PidInfo[]> {
+  const now = Date.now();
+  if (lastPidData.length === 0 || (now - lastPidFetchTime) > PID_CACHE_DURATION) {
+    try {
+      lastPidData = await parsePidInfo();
+      lastPidFetchTime = now;
+    } catch (error) {
+      console.error('Failed to fetch PID data, using cached data if available:', error);
+      if (lastPidData.length === 0) {
+        throw error;
+      }
+    }
+  }
+  return lastPidData;
 }
 
 async function parseSensorsFromThermal(thermalData: any): Promise<Sensor[]> {
@@ -98,6 +134,72 @@ async function parseFansFromThermal(thermalData: any): Promise<Fan[]> {
   }
   
   return fans;
+}
+
+async function parsePidInfo(): Promise<PidInfo[]> {
+  try {
+    const output = await runIloCommand("fan info a");
+    const lines = output.split('\n');
+    const pids: PidInfo[] = [];
+    
+    // Find the header line to get column positions
+    let dataStartIndex = -1;
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].includes('No.') && lines[i].includes('prev_drive') && lines[i].includes('output')) {
+        dataStartIndex = i + 1;
+        break;
+      }
+    }
+    
+    if (dataStartIndex === -1) {
+      console.warn('Could not find PID data header in fan info output');
+      return [];
+    }
+    
+    // Parse each PID line
+    for (let i = dataStartIndex; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line || !line.match(/^\d+/)) continue; // Skip non-data lines
+      
+      // Split by whitespace and parse
+      const parts = line.split(/\s+/);
+      if (parts.length >= 11) {
+        const number = parseInt(parts[0]);
+        const pgain = parseFloat(parts[1]);
+        const igain = parseFloat(parts[2]);
+        const dgain = parseFloat(parts[3]);
+        const setpoint = parseFloat(parts[4]);
+        const imin = parseFloat(parts[5]);
+        const imax = parseFloat(parts[6]);
+        const lowLimit = parseFloat(parts[7]);
+        const highLimit = parseFloat(parts[8]);
+        const prevDrive = parseFloat(parts[9]);
+        const output = parseFloat(parts[10]);
+        
+        const isActive = prevDrive > 0 || output > 0;
+        
+        pids.push({
+          number,
+          pgain,
+          igain,
+          dgain,
+          setpoint,
+          imin,
+          imax,
+          lowLimit,
+          highLimit,
+          prevDrive,
+          output,
+          isActive
+        });
+      }
+    }
+    
+    return pids;
+  } catch (error) {
+    console.error('Failed to parse PID info:', error);
+    return [];
+  }
 }
 
 // Update history every minute with individual sensor readings
@@ -179,6 +281,25 @@ export function resetFanOverrides() {
 
 export function getSensorHistory() {
   return history;
+}
+
+export async function getActivePids(): Promise<PidInfo[]> {
+  try {
+    const pids = await getCachedPidData();
+    return pids.filter(pid => pid.isActive);
+  } catch (error) {
+    console.error('Failed to get active PIDs:', error);
+    return [];
+  }
+}
+
+export async function getAllPids(): Promise<PidInfo[]> {
+  try {
+    return await getCachedPidData();
+  } catch (error) {
+    console.error('Failed to get all PIDs:', error);
+    return [];
+  }
 }
 
 export async function setFanSpeed(speed: number) {

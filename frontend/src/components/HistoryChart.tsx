@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getHistory, getAvailableSensors } from "../api";
+import { getHistory, getAvailableSensors, getActivePids } from "../api";
 import { 
   Card, 
   CardContent, 
@@ -37,6 +37,22 @@ type SensorInfo = {
   name: string;
   context: string;
   currentReading: number;
+  isActive: boolean;
+};
+
+type PidInfo = {
+  number: number;
+  pgain: number;
+  igain: number;
+  dgain: number;
+  setpoint: number;
+  imin: number;
+  imax: number;
+  lowLimit: number;
+  highLimit: number;
+  prevDrive: number;
+  output: number;
+  isActive: boolean;
 };
 
 type HistoryPoint = {
@@ -50,6 +66,7 @@ function HistoryChart() {
   const [availableSensors, setAvailableSensors] = useState<SensorInfo[]>([]);
   const [selectedSensors, setSelectedSensors] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [showFahrenheit, setShowFahrenheit] = useState(false);
   const theme = useTheme();
 
@@ -77,23 +94,63 @@ function HistoryChart() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [histData, sensorsData] = await Promise.all([
+        const [histData, sensorsResponse, activePids] = await Promise.all([
           getHistory(),
-          getAvailableSensors()
+          getAvailableSensors(),
+          getActivePids()
         ]);
         
         setHistoryData(histData);
+        
+        // Handle the new response format
+        const sensorsData = sensorsResponse.sensors || sensorsResponse; // Handle both old and new formats
         setAvailableSensors(sensorsData);
         
-        // Auto-select CPU sensors by default
-        const defaultSensors = sensorsData
-          .filter((sensor: SensorInfo) => 
-            sensor.context === 'CPU' || sensor.name.toLowerCase().includes('cpu')
-          )
-          .map((sensor: SensorInfo) => sensor.name)
-          .slice(0, 3); // Limit to first 3 CPU sensors
-        
-        setSelectedSensors(defaultSensors);
+        // Only set default sensors on initial load, not on updates
+        if (isInitialLoad) {
+          // Get sensor numbers that correspond to active PIDs
+          const activePidNumbers = activePids.map((pid: PidInfo) => pid.number);
+          
+          // Find sensors that correspond to active PIDs or have active readings
+          const activeSensors = sensorsData
+            .filter((sensor: SensorInfo) => {
+              // Extract sensor number from name if possible (e.g., "01-Inlet Ambient" -> 1)
+              const sensorNumberMatch = sensor.name.match(/^(\d+)-/);
+              const sensorNumber = sensorNumberMatch ? parseInt(sensorNumberMatch[1]) : null;
+              
+              // Include if:
+              // 1. Sensor number matches an active PID
+              // 2. Sensor has active reading and is important type
+              const matchesActivePid = sensorNumber && activePidNumbers.includes(sensorNumber);
+              const hasActiveReading = sensor.currentReading > 0;
+              const isImportantSensor = 
+                sensor.name.toLowerCase().includes('cpu') ||
+                sensor.name.toLowerCase().includes('system') ||
+                sensor.name.toLowerCase().includes('ambient') ||
+                sensor.name.toLowerCase().includes('inlet') ||
+                sensor.name.toLowerCase().includes('exhaust') ||
+                sensor.name.toLowerCase().includes('chipset');
+              
+              return matchesActivePid || (hasActiveReading && isImportantSensor);
+            })
+            .map((sensor: SensorInfo) => sensor.name)
+            .slice(0, 6); // Show up to 6 sensors by default
+          
+          // If no sensors found using PID logic, fall back to CPU sensors
+          if (activeSensors.length === 0) {
+            const cpuSensors = sensorsData
+              .filter((sensor: SensorInfo) => 
+                sensor.context === 'CPU' || sensor.name.toLowerCase().includes('cpu')
+              )
+              .map((sensor: SensorInfo) => sensor.name)
+              .slice(0, 3);
+            setSelectedSensors(cpuSensors);
+          } else {
+            setSelectedSensors(activeSensors);
+          }
+          
+          setIsInitialLoad(false);
+        }
       } catch (error) {
         console.error('Failed to fetch data:', error);
       } finally {
@@ -103,11 +160,11 @@ function HistoryChart() {
     
     fetchData();
     const interval = setInterval(() => {
-      // Update silently without showing loading
+      // Update silently without changing selected sensors
       fetchData();
     }, 60000); // Update every minute to match backend collection interval
     return () => clearInterval(interval);
-  }, []);
+  }, [isInitialLoad]);
 
   const handleSensorChange = (event: SelectChangeEvent<typeof selectedSensors>) => {
     const value = event.target.value;

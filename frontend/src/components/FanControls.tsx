@@ -630,11 +630,17 @@ function SafeSensorLimits() {
                   onClick={handleSetLowLimit}
                   disabled={!selectedSensor}
                   fullWidth
+                  size="large"
                   sx={{ 
                     height: 56, // Match input field height
-                    fontWeight: 600,
+                    borderRadius: 2,
                     textTransform: 'none',
-                    fontSize: '0.875rem'
+                    fontWeight: 500,
+                    px: 3,
+                    boxShadow: 2,
+                    '&:hover': {
+                      boxShadow: 4
+                    }
                   }}
                 >
                   Apply Changes

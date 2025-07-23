@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getSensors, overrideSensor, resetSensorOverrides, getSensorHistory } from "../services/ilo.js";
+import { getSensors, overrideSensor, resetSensorOverrides, getSensorHistory, getActivePids, getAllPids } from "../services/ilo.js";
 import { runIloCommand } from "../services/sshClient.js";
 
 const router = Router();
@@ -17,13 +17,23 @@ router.get("/", async (_req, res) => {
 // GET /sensors/available — get list of available sensor names for filtering
 router.get("/available", async (_req, res) => {
   try {
-    const sensors = await getSensors();
+    const [sensors, activePids] = await Promise.all([getSensors(), getActivePids()]);
+    
     const sensorNames = sensors.map(sensor => ({
       name: sensor.name,
       context: sensor.context || 'Unknown',
-      currentReading: sensor.reading
+      currentReading: sensor.reading,
+      isActive: sensor.reading > 0
     }));
-    res.json(sensorNames);
+    
+    // Add information about which sensors have active PIDs
+    const activePidNumbers = activePids.map(pid => pid.number);
+    
+    res.json({
+      sensors: sensorNames,
+      activePidNumbers: activePidNumbers,
+      activePidCount: activePids.length
+    });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
@@ -96,6 +106,26 @@ router.post("/set-low-limit", async (req, res) => {
         command: command
       });
     }
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// GET /sensors/pids — get PID algorithm information
+router.get("/pids", async (_req, res) => {
+  try {
+    const allPids = await getAllPids();
+    res.json(allPids);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// GET /sensors/active-pids — get only active PID algorithms (prev_drive > 0 or output > 0)
+router.get("/active-pids", async (_req, res) => {
+  try {
+    const activePids = await getActivePids();
+    res.json(activePids);
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
