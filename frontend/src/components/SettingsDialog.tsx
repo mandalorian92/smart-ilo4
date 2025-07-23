@@ -24,7 +24,8 @@ import {
   Close as CloseIcon,
   Lock as LockIcon,
   AccessTime as TimeIcon,
-  Security as SecurityIcon
+  Security as SecurityIcon,
+  People as PeopleIcon
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 
@@ -34,16 +35,18 @@ interface SettingsDialogProps {
 }
 
 export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
-  const [activeTab, setActiveTab] = useState<'password' | 'session'>('password');
+  const [activeTab, setActiveTab] = useState<'password' | 'session' | 'users'>('password');
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [sessionTimeout, setSessionTimeout] = useState<number>(30);
+  const [newUsername, setNewUsername] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const { user, changePassword, updateSessionTimeout } = useAuth();
+  const { user, changePassword, updateSessionTimeout, createUser, deleteUser, getAllUsers } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -60,6 +63,8 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
       setOldPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      setNewUsername('');
+      setNewUserPassword('');
       setActiveTab('password');
     }
   }, [open]);
@@ -78,9 +83,6 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     }
     if (!/[0-9]/.test(password)) {
       errors.push('Password must contain at least one number');
-    }
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-      errors.push('Password must contain at least one special character');
     }
     
     return errors;
@@ -136,6 +138,62 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
 
     updateSessionTimeout(sessionTimeout);
     setSuccess(`Session timeout updated to ${sessionTimeout} minutes`);
+  };
+
+  const handleCreateUser = async () => {
+    setError('');
+    setSuccess('');
+
+    if (!newUsername || !newUserPassword) {
+      setError('Please fill in both username and password');
+      return;
+    }
+
+    const passwordErrors = validatePassword(newUserPassword);
+    if (passwordErrors.length > 0) {
+      setError(passwordErrors[0]);
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const success = await createUser(newUsername, newUserPassword);
+      if (success) {
+        setSuccess(`User "${newUsername}" created successfully`);
+        setNewUsername('');
+        setNewUserPassword('');
+      } else {
+        setError('Username already exists');
+      }
+    } catch (error) {
+      setError('An error occurred while creating the user');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string, username: string) => {
+    if (!window.confirm(`Are you sure you want to delete user "${username}"?`)) {
+      return;
+    }
+
+    setError('');
+    setSuccess('');
+    setLoading(true);
+
+    try {
+      const success = await deleteUser(userId);
+      if (success) {
+        setSuccess(`User "${username}" deleted successfully`);
+      } else {
+        setError('Cannot delete this user');
+      }
+    } catch (error) {
+      setError('An error occurred while deleting the user');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatTimeRemaining = (seconds: number): string => {
@@ -231,6 +289,22 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
             startIcon={<TimeIcon />}
           >
             Session
+          </Button>
+          <Button
+            onClick={() => setActiveTab('users')}
+            variant="text"
+            sx={{
+              flex: 1,
+              borderRadius: 0,
+              textTransform: 'none',
+              fontWeight: activeTab === 'users' ? 600 : 400,
+              color: activeTab === 'users' ? 'primary.main' : 'text.secondary',
+              borderBottom: activeTab === 'users' ? `2px solid ${theme.palette.primary.main}` : 'none',
+              py: 2
+            }}
+            startIcon={<PeopleIcon />}
+          >
+            Users
           </Button>
         </Box>
 
@@ -403,6 +477,155 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
               </Stack>
             </Box>
           )}
+
+          {activeTab === 'users' && (
+            <Box>
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                User Management
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Create and manage user accounts for system access
+              </Typography>
+
+              <Stack spacing={3}>
+                {/* Create New User Section */}
+                <Box sx={{ 
+                  p: 2, 
+                  border: `1px solid ${theme.palette.divider}`, 
+                  borderRadius: 2 
+                }}>
+                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                    Create New User
+                  </Typography>
+                  <Stack spacing={2}>
+                    <TextField
+                      label="Username"
+                      value={newUsername}
+                      onChange={(e) => setNewUsername(e.target.value)}
+                      fullWidth
+                      variant="outlined"
+                      disabled={loading}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2
+                        }
+                      }}
+                    />
+                    <TextField
+                      label="Password"
+                      type="password"
+                      value={newUserPassword}
+                      onChange={(e) => setNewUserPassword(e.target.value)}
+                      fullWidth
+                      variant="outlined"
+                      disabled={loading}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2
+                        }
+                      }}
+                    />
+                    <Button
+                      onClick={handleCreateUser}
+                      variant="contained"
+                      disabled={loading || !newUsername || !newUserPassword}
+                      sx={{ 
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 500
+                      }}
+                    >
+                      {loading ? <CircularProgress size={20} /> : 'Create User'}
+                    </Button>
+                  </Stack>
+                </Box>
+
+                {/* Existing Users List */}
+                <Box sx={{ 
+                  p: 2, 
+                  border: `1px solid ${theme.palette.divider}`, 
+                  borderRadius: 2 
+                }}>
+                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                    Existing Users
+                  </Typography>
+                  <Stack spacing={1}>
+                    {getAllUsers().map((userItem) => (
+                      <Box
+                        key={userItem.id}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          p: 2,
+                          bgcolor: userItem.id === user?.id ? 'action.selected' : 'background.paper',
+                          border: `1px solid ${theme.palette.divider}`,
+                          borderRadius: 1
+                        }}
+                      >
+                        <Box>
+                          <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                            {userItem.username}
+                            {userItem.isDefault && (
+                              <Typography component="span" variant="caption" sx={{ 
+                                ml: 1, 
+                                color: 'primary.main',
+                                bgcolor: 'primary.50',
+                                px: 1,
+                                py: 0.5,
+                                borderRadius: 1
+                              }}>
+                                Default Admin
+                              </Typography>
+                            )}
+                            {userItem.id === user?.id && (
+                              <Typography component="span" variant="caption" sx={{ 
+                                ml: 1, 
+                                color: 'success.main',
+                                bgcolor: 'success.50',
+                                px: 1,
+                                py: 0.5,
+                                borderRadius: 1
+                              }}>
+                                You
+                              </Typography>
+                            )}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Created: {new Date(userItem.createdAt).toLocaleDateString()}
+                          </Typography>
+                        </Box>
+                        {!userItem.isDefault && userItem.id !== user?.id && (
+                          <Button
+                            onClick={() => handleDeleteUser(userItem.id, userItem.username)}
+                            variant="outlined"
+                            color="error"
+                            size="small"
+                            disabled={loading}
+                            sx={{ 
+                              borderRadius: 1,
+                              textTransform: 'none',
+                              minWidth: 'auto',
+                              px: 2
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        )}
+                      </Box>
+                    ))}
+                  </Stack>
+                </Box>
+
+                <Alert severity="info" sx={{ borderRadius: 2 }}>
+                  <Typography variant="body2">
+                    <strong>Note:</strong> The default admin user cannot be deleted and provides system access recovery.
+                    You cannot delete your own account while logged in.
+                  </Typography>
+                </Alert>
+              </Stack>
+            </Box>
+          )}
         </Box>
       </DialogContent>
 
@@ -443,7 +666,7 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
               'Update Password'
             )}
           </Button>
-        ) : (
+        ) : activeTab === 'session' ? (
           <Button
             onClick={handleSessionTimeoutChange}
             variant="contained"
@@ -456,6 +679,9 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
           >
             Apply Changes
           </Button>
+        ) : (
+          // Users tab - no main action button needed since actions are inline
+          null
         )}
       </DialogActions>
     </Dialog>

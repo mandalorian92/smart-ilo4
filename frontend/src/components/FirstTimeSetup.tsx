@@ -44,9 +44,6 @@ export default function FirstTimeSetup() {
     if (!/[0-9]/.test(password)) {
       errors.push('Password must contain at least one number');
     }
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-      errors.push('Password must contain at least one special character');
-    }
     
     return errors;
   };
@@ -79,12 +76,16 @@ export default function FirstTimeSetup() {
     setLoading(true);
     
     try {
+      console.log('Attempting to set up first user...', { username: username.trim() });
       const success = await setupFirstUser(username.trim(), password);
+      console.log('Setup result:', success);
+      
       if (!success) {
-        setError('Failed to set up user account');
+        setError('Failed to set up user account. Please check the browser console for details.');
       }
     } catch (error) {
-      setError('An error occurred during setup');
+      console.error('Setup error:', error);
+      setError('An error occurred during setup: ' + (error as Error).message);
     } finally {
       setLoading(false);
     }
