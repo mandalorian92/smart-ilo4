@@ -130,7 +130,9 @@ function FanControls() {
       await invalidateFanCache();
       
       addDebugLog('Refreshing fan data...');
-      await fetchFans(true); // Bust cache to get fresh data
+      // Wait a bit longer for iLO to settle, then refresh
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Additional 1 second wait
+      await fetchFans(true, true); // Get fresh data, indicate this is after an update
       addDebugLog('✓ Fan data refreshed');
     } catch (error) {
       const errorMsg = (error as any).response?.data?.error || (error as Error).message;
@@ -160,17 +162,28 @@ function FanControls() {
     }
   };
 
-  const fetchFans = async (bustCache = false) => {
+  const fetchFans = async (bustCache = false, isAfterUpdate = false) => {
     try {
       // Add cache busting parameter when needed
       const url = bustCache ? `/fans?_t=${Date.now()}` : '/fans';
       const data = await getFans();
       setFans(data);
+      
       const speeds: Record<string, number> = {};
       data.forEach((fan: any) => speeds[fan.name] = Math.max(10, fan.speed)); // Ensure minimum 10%
+      
+      // If this refresh is after an update and we're in Edit All mode,
+      // we should make sure all sliders show the same value
+      if (isAfterUpdate && editAllMode) {
+        // In Edit All mode after update, set all fan speeds to match the global speed
+        // This prevents the "drift" issue where one slider shows different value
+        addDebugLog(`Edit All mode: synchronizing all sliders to ${globalSpeed}%`);
+        data.forEach((fan: any) => speeds[fan.name] = globalSpeed);
+      }
+      
       setFanSpeeds(speeds);
       
-      // Also update global speed to match if all fans are at the same speed
+      // Update global speed to match if all fans are at the same speed
       const speedValues = Object.values(speeds);
       const uniqueSpeeds = Array.from(new Set(speedValues));
       if (uniqueSpeeds.length === 1) {
@@ -184,155 +197,216 @@ function FanControls() {
 
   return (
     <>
-    <Card sx={{ 
-      mb: 4, 
-      bgcolor: theme.palette.background.paper,
-      color: theme.palette.text.primary,
-      border: `1px solid ${theme.palette.divider}`
-    }}>
+    <Card sx={{ mb: 4 }}>
       <CardContent>
-        <Typography variant="h6" gutterBottom sx={{ 
-          color: theme.palette.primary.main, 
-          display: 'flex', 
-          alignItems: 'center' 
-        }}>
-          <Box sx={{ 
-            width: 20, 
-            height: 20, 
-            bgcolor: theme.palette.primary.main, 
-            mr: 2, 
-            borderRadius: 1 
-          }} />
-          iLO Fan Controller
-          {loading && <CircularProgress size={20} sx={{ ml: 2, color: theme.palette.primary.main }} />}
+        <Typography variant="h6" sx={{ mb: 3 }}>
+          Fan Controller
+          {loading && <CircularProgress size={20} sx={{ ml: 2 }} />}
         </Typography>
         
-        {/* Edit All Toggle */}
-        <Box sx={{ mb: 3 }}>
+        {/* Control Panel Header */}
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          mb: 3,
+          p: 2,
+          borderRadius: 2,
+          bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+          border: `1px solid ${theme.palette.divider}`
+        }}>
           <FormControlLabel
             control={
               <Switch 
                 checked={editAllMode} 
                 onChange={(e) => setEditAllMode(e.target.checked)}
-                sx={{
-                  '& .MuiSwitch-switchBase.Mui-checked': { color: theme.palette.primary.main },
-                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: theme.palette.primary.main }
-                }}
+                size="medium"
               />
             }
-            label="Edit All"
-            sx={{ color: theme.palette.text.primary }}
+            label={
+              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                Edit All Fans
+              </Typography>
+            }
           />
-        </Box>
-
-        {/* Preset Buttons */}
-        <Box sx={{ mb: 3 }}>
-          <ButtonGroup variant="contained" sx={{ mb: 2 }}>
+          
+          {/* Preset Buttons - Modern Chip Style */}
+          <Box sx={{ display: 'flex', gap: 1 }}>
             <Button 
               onClick={() => handlePresetSpeed('quiet')}
+              variant="outlined"
+              size="small"
+              color="info"
               sx={{ 
-                bgcolor: theme.palette.info.main, 
-                '&:hover': { bgcolor: theme.palette.info.dark },
-                color: theme.palette.info.contrastText
+                borderRadius: 3,
+                textTransform: 'none',
+                fontWeight: 500,
+                minWidth: 'auto',
+                px: 2
               }}
             >
               Quiet
             </Button>
             <Button 
               onClick={() => handlePresetSpeed('normal')}
+              variant="outlined"
+              size="small"
+              color="success"
               sx={{ 
-                bgcolor: theme.palette.success.main, 
-                '&:hover': { bgcolor: theme.palette.success.dark },
-                color: theme.palette.success.contrastText
+                borderRadius: 3,
+                textTransform: 'none',
+                fontWeight: 500,
+                minWidth: 'auto',
+                px: 2
               }}
             >
               Normal
             </Button>
             <Button 
               onClick={() => handlePresetSpeed('turbo')}
+              variant="outlined"
+              size="small"
+              color="error"
               sx={{ 
-                bgcolor: theme.palette.error.main, 
-                '&:hover': { bgcolor: theme.palette.error.dark },
-                color: theme.palette.error.contrastText
+                borderRadius: 3,
+                textTransform: 'none',
+                fontWeight: 500,
+                minWidth: 'auto',
+                px: 2
               }}
             >
               Turbo
             </Button>
-          </ButtonGroup>
+          </Box>
         </Box>
 
-        {/* Fan Controls */}
-        <Box sx={{ mb: 3 }}>
-          {fans.map((fan) => (
-            <Box key={fan.name} sx={{ mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <Typography sx={{ minWidth: 80, color: theme.palette.text.primary }}>
-                  {fan.name}
-                </Typography>
-                <Slider
-                  value={Math.max(10, fanSpeeds[fan.name] || fan.speed)}
-                  onChange={(_, value) => handleFanSpeedChange(fan.name, value as number)}
-                  min={10}
-                  max={100}
+        {/* Fan Controls Grid */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.secondary }}>
+            Individual Fan Controls
+          </Typography>
+          <Grid container spacing={2}>
+            {fans.map((fan) => (
+              <Grid item xs={12} key={fan.name}>
+                <Paper 
+                  elevation={0}
                   sx={{ 
-                    mx: 2, 
-                    flex: 1,
-                    color: theme.palette.primary.main,
-                    '& .MuiSlider-thumb': { color: theme.palette.primary.main },
-                    '& .MuiSlider-track': { color: theme.palette.primary.main },
-                    '& .MuiSlider-rail': { color: theme.palette.divider }
+                    p: 2, 
+                    borderRadius: 2,
+                    border: `1px solid ${theme.palette.divider}`,
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.01)'
                   }}
-                  disabled={false} // Always enabled - logic handled in handleFanSpeedChange
-                />
-                <TextField
-                  value={Math.max(10, fanSpeeds[fan.name] || fan.speed)}
-                  onChange={(e) => handleFanSpeedChange(fan.name, Math.max(10, parseInt(e.target.value) || 10))}
-                  type="number"
-                  inputProps={{ min: 10, max: 100 }}
-                  size="small"
-                  sx={{ 
-                    width: 60,
-                    '& .MuiOutlinedInput-root': {
-                      '& fieldset': { borderColor: theme.palette.divider },
-                      '&:hover fieldset': { borderColor: theme.palette.primary.main },
-                      '&.Mui-focused fieldset': { borderColor: theme.palette.primary.main },
-                      color: theme.palette.text.primary
-                    },
-                    '& .MuiInputBase-input': { color: theme.palette.text.primary }
-                  }}
-                  disabled={false} // Always enabled - logic handled in handleFanSpeedChange
-                />
-                <Typography sx={{ ml: 1, color: theme.palette.text.primary }}>%</Typography>
-              </Box>
-            </Box>
-          ))}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        minWidth: 100, 
+                        fontWeight: 500,
+                        color: theme.palette.text.primary 
+                      }}
+                    >
+                      {fan.name}
+                    </Typography>
+                    <Slider
+                      value={Math.max(10, fanSpeeds[fan.name] || fan.speed)}
+                      onChange={(_, value) => handleFanSpeedChange(fan.name, value as number)}
+                      min={10}
+                      max={100}
+                      sx={{ 
+                        flex: 1,
+                        mx: 1,
+                        '& .MuiSlider-thumb': { 
+                          width: 20, 
+                          height: 20,
+                          '&:hover': {
+                            boxShadow: `0 0 0 8px ${theme.palette.primary.main}20`
+                          }
+                        },
+                        '& .MuiSlider-track': { 
+                          height: 6,
+                          borderRadius: 3
+                        },
+                        '& .MuiSlider-rail': { 
+                          height: 6,
+                          borderRadius: 3,
+                          opacity: 0.3
+                        }
+                      }}
+                    />
+                    <TextField
+                      value={Math.max(10, fanSpeeds[fan.name] || fan.speed)}
+                      onChange={(e) => handleFanSpeedChange(fan.name, Math.max(10, parseInt(e.target.value) || 10))}
+                      type="number"
+                      inputProps={{ min: 10, max: 100 }}
+                      size="small"
+                      variant="outlined"
+                      sx={{ 
+                        width: 80,
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          '& fieldset': { 
+                            borderColor: theme.palette.divider 
+                          },
+                          '&:hover fieldset': { 
+                            borderColor: theme.palette.primary.main 
+                          },
+                          '&.Mui-focused fieldset': { 
+                            borderColor: theme.palette.primary.main 
+                          }
+                        }
+                      }}
+                      InputProps={{
+                        endAdornment: <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mr: 1 }}>%</Typography>
+                      }}
+                    />
+                  </Box>
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
         </Box>
 
-        {/* Action Buttons */}
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+        {/* Action Buttons - Modern Layout */}
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 2, 
+          justifyContent: 'flex-end',
+          pt: 2,
+          borderTop: `1px solid ${theme.palette.divider}`
+        }}>
+          <Button
+            variant="outlined"
+            onClick={handleUnlock}
+            disabled={loading}
+            size="large"
+            sx={{ 
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 500,
+              px: 3
+            }}
+          >
+            Unlock Fans
+          </Button>
           <Button
             variant="contained"
             onClick={handleUpdate}
             disabled={loading}
+            size="large"
             sx={{ 
-              bgcolor: theme.palette.success.main, 
-              '&:hover': { bgcolor: theme.palette.success.dark },
-              color: theme.palette.success.contrastText
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 500,
+              px: 3,
+              boxShadow: 2,
+              '&:hover': {
+                boxShadow: 4
+              }
             }}
           >
-            {loading ? <CircularProgress size={20} sx={{ color: theme.palette.success.contrastText }} /> : 'Update'}
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleUnlock}
-            disabled={loading}
-            sx={{ 
-              bgcolor: theme.palette.secondary.main, 
-              '&:hover': { bgcolor: theme.palette.secondary.dark },
-              color: theme.palette.secondary.contrastText
-            }}
-          >
-            Unlock
+            {loading ? <CircularProgress size={20} sx={{ mr: 1 }} /> : null}
+            {loading ? 'Updating...' : 'Apply Changes'}
           </Button>
         </Box>
 
@@ -351,17 +425,9 @@ function FanControls() {
     </Card>
 
     {/* Debug Terminal Card */}
-    <Card sx={{ 
-      mb: 4, 
-      bgcolor: theme.palette.background.paper,
-      border: `1px solid ${theme.palette.divider}`
-    }}>
+    <Card sx={{ mb: 4 }}>
       <CardContent>
-        <Typography variant="h6" sx={{ 
-          mb: 2, 
-          color: theme.palette.mode === 'dark' ? theme.palette.success.light : theme.palette.success.dark,
-          fontFamily: 'monospace' 
-        }}>
+        <Typography variant="h6" sx={{ mb: 2 }}>
           Debug Terminal
         </Typography>
         

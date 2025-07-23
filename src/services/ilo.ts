@@ -21,7 +21,14 @@ type Fan = {
 
 let sensorOverrides: Record<string, number> = {};
 let fanOverrides: Record<string, number> = {};
-let history: { time: string; avgTemp: number }[] = [];
+// History data structure: store individual sensor readings over time
+type SensorHistoryPoint = {
+  time: string;
+  timestamp: number; // Unix timestamp for proper timezone handling
+  sensors: { [sensorName: string]: number }; // Individual sensor readings
+};
+
+let history: SensorHistoryPoint[] = [];
 let lastThermalData: any = null;
 
 // Cache thermal data for 30 seconds to avoid too many API calls
@@ -93,23 +100,29 @@ async function parseFansFromThermal(thermalData: any): Promise<Fan[]> {
   return fans;
 }
 
-// Update history every minute with average CPU temperature
+// Update history every minute with individual sensor readings
 setInterval(async () => {
   try {
     const sensors = await getSensors();
-    const cpuSensors = sensors.filter(s => 
-      s.context === 'CPU' || s.name.toLowerCase().includes('cpu')
-    );
+    const now = new Date();
+    const timestamp = now.getTime();
+    const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     
-    if (cpuSensors.length > 0) {
-      const avgCpuTemp = cpuSensors.reduce((sum, sensor) => sum + sensor.reading, 0) / cpuSensors.length;
-      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      history.push({ time, avgTemp: avgCpuTemp });
-      
-      // Keep only last 60 entries (1 hour of data)
-      if (history.length > 60) {
-        history = history.slice(-60);
-      }
+    // Store individual sensor readings
+    const sensorReadings: { [sensorName: string]: number } = {};
+    sensors.forEach(sensor => {
+      sensorReadings[sensor.name] = sensor.reading;
+    });
+    
+    history.push({ 
+      time, 
+      timestamp,
+      sensors: sensorReadings 
+    });
+    
+    // Keep only last 60 entries (1 hour of data)
+    if (history.length > 60) {
+      history = history.slice(-60);
     }
   } catch (error) {
     console.error('Failed to update history:', error);

@@ -13,7 +13,22 @@ router.get("/", async (_req, res) => {
   }
 });
 
-// GET /sensors/history — past hour of avg temperature samples [{ time, avgTemp }]
+// GET /sensors/available — get list of available sensor names for filtering
+router.get("/available", async (_req, res) => {
+  try {
+    const sensors = await getSensors();
+    const sensorNames = sensors.map(sensor => ({
+      name: sensor.name,
+      context: sensor.context || 'Unknown',
+      currentReading: sensor.reading
+    }));
+    res.json(sensorNames);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// GET /sensors/history — past hour of individual sensor readings with proper timestamps
 router.get("/history", (_req, res) => {
   try {
     const history = getSensorHistory();

@@ -8,6 +8,11 @@ export async function getSensors() {
   return res.data;
 }
 
+export async function getAvailableSensors() {
+  const res = await axios.get(`${API_BASE}/sensors/available`);
+  return res.data;
+}
+
 export async function getFans() {
   const res = await axios.get(`${API_BASE}/fans`);
   return res.data;

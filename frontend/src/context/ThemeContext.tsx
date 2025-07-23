@@ -30,18 +30,46 @@ const getSystemPreference = (): 'light' | 'dark' => {
 const createCustomTheme = (mode: 'light' | 'dark'): Theme => {
   const isDark = mode === 'dark';
   
+  // HPE Official Colors from Design System
+  const hpeColors = {
+    // Light theme colors
+    light: {
+      green: '#17eba0',
+      purple: '#f740ff',
+      teal: '#82fff2',
+      blue: '#00c8ff',
+      red: '#fc6161',
+      orange: '#ffbc44',
+      yellow: '#ffeb59',
+    },
+    // Dark theme colors
+    dark: {
+      green: '#008567',
+      purple: '#6633bc',
+      teal: '#117b82',
+      blue: '#007390',
+      red: '#a2423d',
+      orange: '#964310',
+      yellow: '#8d741c',
+    },
+    // Keep the existing dark blue for app bar
+    appBarDark: '#1f2532',
+  };
+
+  const currentColors = isDark ? hpeColors.dark : hpeColors.light;
+  
   return createTheme({
     palette: {
       mode,
       primary: {
-        main: isDark ? '#90caf9' : '#1976d2',
-        light: isDark ? '#bbdefb' : '#42a5f5',
-        dark: isDark ? '#64b5f6' : '#1565c0',
+        main: currentColors.green,
+        light: isDark ? hpeColors.light.green : '#4df0b8',
+        dark: isDark ? '#005a46' : hpeColors.dark.green,
       },
       secondary: {
-        main: isDark ? '#f48fb1' : '#dc004e',
-        light: isDark ? '#f8bbd9' : '#ff5983',
-        dark: isDark ? '#f06292' : '#9a0036',
+        main: currentColors.blue,
+        light: isDark ? hpeColors.light.blue : '#33d4ff',
+        dark: isDark ? '#004d66' : hpeColors.dark.blue,
       },
       background: {
         default: isDark ? '#121212' : '#fafafa',
@@ -53,32 +81,33 @@ const createCustomTheme = (mode: 'light' | 'dark'): Theme => {
       },
       divider: isDark ? '#2e2e2e' : '#e0e0e0',
       success: {
-        main: isDark ? '#4caf50' : '#2e7d32',
-        light: isDark ? '#81c784' : '#4caf50',
-        dark: isDark ? '#388e3c' : '#1b5e20',
+        main: currentColors.green,
+        light: isDark ? hpeColors.light.green : '#4df0b8',
+        dark: isDark ? '#005a46' : hpeColors.dark.green,
       },
       warning: {
-        main: isDark ? '#ff9800' : '#ed6c02',
-        light: isDark ? '#ffb74d' : '#ff9800',
-        dark: isDark ? '#f57c00' : '#e65100',
+        main: currentColors.orange,
+        light: isDark ? hpeColors.light.orange : '#ffcd70',
+        dark: isDark ? '#6d2f0b' : hpeColors.dark.orange,
       },
       error: {
-        main: isDark ? '#f44336' : '#d32f2f',
-        light: isDark ? '#ef5350' : '#f44336',
-        dark: isDark ? '#c62828' : '#b71c1c',
+        main: currentColors.red,
+        light: isDark ? hpeColors.light.red : '#fd8b8b',
+        dark: isDark ? '#723028' : hpeColors.dark.red,
       },
       info: {
-        main: isDark ? '#29b6f6' : '#0288d1',
-        light: isDark ? '#4fc3f7' : '#29b6f6',
-        dark: isDark ? '#0277bd' : '#01579b',
+        main: currentColors.blue,
+        light: isDark ? hpeColors.light.blue : '#33d4ff',
+        dark: isDark ? '#004d66' : hpeColors.dark.blue,
       },
     },
     components: {
       MuiAppBar: {
         styleOverrides: {
           root: {
-            backgroundColor: isDark ? '#1e1e1e' : '#1976d2',
-            color: isDark ? '#ffffff' : '#ffffff',
+            backgroundColor: isDark ? '#008567' : '#17eba0', // Dark theme: HPE Dark Green, Light theme: HPE Bright Green
+            color: '#ffffff',
+            transition: 'background-color 0.3s ease', // Smooth transition when switching themes
           },
         },
       },
@@ -123,7 +152,7 @@ const createCustomTheme = (mode: 'light' | 'dark'): Theme => {
       MuiSlider: {
         styleOverrides: {
           root: {
-            color: isDark ? '#90caf9' : '#1976d2',
+            color: currentColors.green, // Use HPE Green for sliders
           },
         },
       },

@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { Container, Typography, Box, AppBar, Toolbar } from "@mui/material";
 import { ThemeProvider } from "./context/ThemeContext";
 import ThemeToggle from "./components/ThemeToggle";
 import Dashboard from "./components/Dashboard";
 import HistoryChart from "./components/HistoryChart";
 import FanControls from "./components/FanControls";
+import SplashScreen from "./components/SplashScreen";
 
 function AppContent() {
   return (
@@ -27,9 +28,19 @@ function AppContent() {
 }
 
 function App() {
+  const [showSplash, setShowSplash] = useState(true);
+
+  const handleSplashComplete = () => {
+    setShowSplash(false);
+  };
+
   return (
     <ThemeProvider>
-      <AppContent />
+      {showSplash ? (
+        <SplashScreen onSplashComplete={handleSplashComplete} />
+      ) : (
+        <AppContent />
+      )}
     </ThemeProvider>
   );
 }
