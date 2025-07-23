@@ -184,12 +184,27 @@ function FanControls() {
 
   return (
     <>
-    <Card sx={{ mb: 4, bgcolor: '#2c3e50', color: 'white' }}>
+    <Card sx={{ 
+      mb: 4, 
+      bgcolor: theme.palette.background.paper,
+      color: theme.palette.text.primary,
+      border: `1px solid ${theme.palette.divider}`
+    }}>
       <CardContent>
-        <Typography variant="h5" gutterBottom sx={{ color: '#2ecc71', display: 'flex', alignItems: 'center' }}>
-          <Box sx={{ width: 20, height: 20, bgcolor: '#2ecc71', mr: 2, borderRadius: 1 }} />
+        <Typography variant="h6" gutterBottom sx={{ 
+          color: theme.palette.primary.main, 
+          display: 'flex', 
+          alignItems: 'center' 
+        }}>
+          <Box sx={{ 
+            width: 20, 
+            height: 20, 
+            bgcolor: theme.palette.primary.main, 
+            mr: 2, 
+            borderRadius: 1 
+          }} />
           iLO Fan Controller
-          {loading && <CircularProgress size={20} sx={{ ml: 2, color: '#2ecc71' }} />}
+          {loading && <CircularProgress size={20} sx={{ ml: 2, color: theme.palette.primary.main }} />}
         </Typography>
         
         {/* Edit All Toggle */}
@@ -199,14 +214,14 @@ function FanControls() {
               <Switch 
                 checked={editAllMode} 
                 onChange={(e) => setEditAllMode(e.target.checked)}
-                sx={{ 
-                  '& .MuiSwitch-switchBase.Mui-checked': { color: '#2ecc71' },
-                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#2ecc71' }
+                sx={{
+                  '& .MuiSwitch-switchBase.Mui-checked': { color: theme.palette.primary.main },
+                  '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: theme.palette.primary.main }
                 }}
               />
             }
             label="Edit All"
-            sx={{ color: 'white' }}
+            sx={{ color: theme.palette.text.primary }}
           />
         </Box>
 
@@ -215,19 +230,31 @@ function FanControls() {
           <ButtonGroup variant="contained" sx={{ mb: 2 }}>
             <Button 
               onClick={() => handlePresetSpeed('quiet')}
-              sx={{ bgcolor: '#3498db', '&:hover': { bgcolor: '#2980b9' } }}
+              sx={{ 
+                bgcolor: theme.palette.info.main, 
+                '&:hover': { bgcolor: theme.palette.info.dark },
+                color: theme.palette.info.contrastText
+              }}
             >
               Quiet
             </Button>
             <Button 
               onClick={() => handlePresetSpeed('normal')}
-              sx={{ bgcolor: '#27ae60', '&:hover': { bgcolor: '#229954' } }}
+              sx={{ 
+                bgcolor: theme.palette.success.main, 
+                '&:hover': { bgcolor: theme.palette.success.dark },
+                color: theme.palette.success.contrastText
+              }}
             >
               Normal
             </Button>
             <Button 
               onClick={() => handlePresetSpeed('turbo')}
-              sx={{ bgcolor: '#e74c3c', '&:hover': { bgcolor: '#c0392b' } }}
+              sx={{ 
+                bgcolor: theme.palette.error.main, 
+                '&:hover': { bgcolor: theme.palette.error.dark },
+                color: theme.palette.error.contrastText
+              }}
             >
               Turbo
             </Button>
@@ -239,7 +266,7 @@ function FanControls() {
           {fans.map((fan) => (
             <Box key={fan.name} sx={{ mb: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <Typography sx={{ minWidth: 80, color: 'white' }}>
+                <Typography sx={{ minWidth: 80, color: theme.palette.text.primary }}>
                   {fan.name}
                 </Typography>
                 <Slider
@@ -250,10 +277,10 @@ function FanControls() {
                   sx={{ 
                     mx: 2, 
                     flex: 1,
-                    color: '#3498db',
-                    '& .MuiSlider-thumb': { color: '#3498db' },
-                    '& .MuiSlider-track': { color: '#3498db' },
-                    '& .MuiSlider-rail': { color: '#555' }
+                    color: theme.palette.primary.main,
+                    '& .MuiSlider-thumb': { color: theme.palette.primary.main },
+                    '& .MuiSlider-track': { color: theme.palette.primary.main },
+                    '& .MuiSlider-rail': { color: theme.palette.divider }
                   }}
                   disabled={false} // Always enabled - logic handled in handleFanSpeedChange
                 />
@@ -266,16 +293,16 @@ function FanControls() {
                   sx={{ 
                     width: 60,
                     '& .MuiOutlinedInput-root': {
-                      '& fieldset': { borderColor: '#555' },
-                      '&:hover fieldset': { borderColor: '#3498db' },
-                      '&.Mui-focused fieldset': { borderColor: '#3498db' },
-                      color: 'white'
+                      '& fieldset': { borderColor: theme.palette.divider },
+                      '&:hover fieldset': { borderColor: theme.palette.primary.main },
+                      '&.Mui-focused fieldset': { borderColor: theme.palette.primary.main },
+                      color: theme.palette.text.primary
                     },
-                    '& .MuiInputBase-input': { color: 'white' }
+                    '& .MuiInputBase-input': { color: theme.palette.text.primary }
                   }}
                   disabled={false} // Always enabled - logic handled in handleFanSpeedChange
                 />
-                <Typography sx={{ ml: 1, color: 'white' }}>%</Typography>
+                <Typography sx={{ ml: 1, color: theme.palette.text.primary }}>%</Typography>
               </Box>
             </Box>
           ))}
@@ -287,15 +314,23 @@ function FanControls() {
             variant="contained"
             onClick={handleUpdate}
             disabled={loading}
-            sx={{ bgcolor: '#27ae60', '&:hover': { bgcolor: '#229954' } }}
+            sx={{ 
+              bgcolor: theme.palette.success.main, 
+              '&:hover': { bgcolor: theme.palette.success.dark },
+              color: theme.palette.success.contrastText
+            }}
           >
-            {loading ? <CircularProgress size={20} sx={{ color: 'white' }} /> : 'Update'}
+            {loading ? <CircularProgress size={20} sx={{ color: theme.palette.success.contrastText }} /> : 'Update'}
           </Button>
           <Button
             variant="contained"
             onClick={handleUnlock}
             disabled={loading}
-            sx={{ bgcolor: '#34495e', '&:hover': { bgcolor: '#2c3e50' } }}
+            sx={{ 
+              bgcolor: theme.palette.secondary.main, 
+              '&:hover': { bgcolor: theme.palette.secondary.dark },
+              color: theme.palette.secondary.contrastText
+            }}
           >
             Unlock
           </Button>
@@ -318,13 +353,13 @@ function FanControls() {
     {/* Debug Terminal Card */}
     <Card sx={{ 
       mb: 4, 
-      bgcolor: theme.palette.mode === 'dark' ? '#1a1a1a' : '#f5f5f5',
+      bgcolor: theme.palette.background.paper,
       border: `1px solid ${theme.palette.divider}`
     }}>
       <CardContent>
         <Typography variant="h6" sx={{ 
           mb: 2, 
-          color: theme.palette.mode === 'dark' ? '#00ff00' : '#2e7d32',
+          color: theme.palette.mode === 'dark' ? theme.palette.success.light : theme.palette.success.dark,
           fontFamily: 'monospace' 
         }}>
           Debug Terminal
@@ -332,13 +367,13 @@ function FanControls() {
         
         <Paper 
           sx={{ 
-            bgcolor: theme.palette.mode === 'dark' ? '#0a0a0a' : '#fafafa',
+            bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[900] : theme.palette.grey[100],
             p: 2, 
             height: 300, 
             overflow: 'auto',
             fontFamily: 'monospace',
             fontSize: '0.875rem',
-            color: theme.palette.mode === 'dark' ? '#00ff00' : '#2e7d32',
+            color: theme.palette.mode === 'dark' ? theme.palette.success.light : theme.palette.success.dark,
             border: `1px solid ${theme.palette.divider}`
           }}
         >
@@ -359,7 +394,7 @@ function FanControls() {
                   color: log.includes('✗') ? theme.palette.error.main : 
                          log.includes('✓') ? theme.palette.success.main : 
                          log.includes('SSH Command:') ? theme.palette.warning.main : 
-                         theme.palette.mode === 'dark' ? '#00ff00' : '#2e7d32',
+                         theme.palette.mode === 'dark' ? theme.palette.success.light : theme.palette.success.dark,
                   mb: 0.5
                 }}
               >
