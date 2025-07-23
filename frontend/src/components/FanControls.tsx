@@ -31,7 +31,7 @@ import {
   Snackbar,
   useTheme,
   useMediaQuery
-} from "@mui/material";function FanControls() {
+} from "@mui/material";function FanControls({ onDebugLog }: { onDebugLog?: (message: string) => void }) {
   const [fans, setFans] = useState<any[]>([]);
   const [fanSpeeds, setFanSpeeds] = useState<Record<string, number>>({});
   const [editAllMode, setEditAllMode] = useState(false);
@@ -49,7 +49,13 @@ import {
 
   const addDebugLog = (message: string) => {
     const timestamp = new Date().toLocaleTimeString();
-    setDebugLogs(prev => [...prev, `[${timestamp}] ${message}`].slice(-20)); // Keep last 20 logs
+    const logMessage = `[${timestamp}] ${message}`;
+    setDebugLogs(prev => [...prev, logMessage].slice(-20)); // Keep last 20 logs
+    
+    // Call the external callback if provided
+    if (onDebugLog) {
+      onDebugLog(logMessage);
+    }
   };
 
   const showNotification = (message: string, severity: 'success' | 'error' | 'info' | 'warning' = 'info') => {
@@ -85,15 +91,6 @@ import {
       fans.forEach(fan => newSpeeds[fan.name] = speed);
       setFanSpeeds(newSpeeds);
     }
-  };
-
-  const handlePresetSpeed = (preset: 'quiet' | 'normal' | 'turbo') => {
-    const speedMap = {
-      quiet: 25,  // 25% minimum
-      normal: 60, // 60% normal
-      turbo: 100  // 100% maximum
-    };
-    handleGlobalSpeedChange(speedMap[preset]);
   };
 
   const applyPreset = (speed: number) => {
@@ -264,10 +261,11 @@ import {
             justifyContent: { xs: 'center', sm: 'flex-end' }
           }}>
             <Button 
-              onClick={() => handlePresetSpeed('quiet')}
+              onClick={() => applyPreset(20)}
               variant="outlined"
               size={isMobile ? "small" : "medium"}
               color="info"
+              disabled={loading}
               sx={{ 
                 borderRadius: 3,
                 textTransform: 'none',
@@ -280,10 +278,11 @@ import {
               Quiet
             </Button>
             <Button 
-              onClick={() => handlePresetSpeed('normal')}
+              onClick={() => applyPreset(45)}
               variant="outlined"
               size={isMobile ? "small" : "medium"}
               color="success"
+              disabled={loading}
               sx={{ 
                 borderRadius: 3,
                 textTransform: 'none',
@@ -296,10 +295,11 @@ import {
               Normal
             </Button>
             <Button 
-              onClick={() => handlePresetSpeed('turbo')}
+              onClick={() => applyPreset(95)}
               variant="outlined"
               size={isMobile ? "small" : "medium"}
               color="error"
+              disabled={loading}
               sx={{ 
                 borderRadius: 3,
                 textTransform: 'none',
@@ -430,83 +430,6 @@ import {
           </Grid>
         </Box>
 
-        {/* Preset Buttons */}
-        <Box sx={{ 
-          display: 'flex', 
-          gap: 1, 
-          justifyContent: 'center',
-          pt: 2,
-          pb: 1,
-          flexWrap: { xs: 'wrap', sm: 'nowrap' }
-        }}>
-          <Button
-            variant="outlined"
-            onClick={() => applyPreset(20)}
-            disabled={loading}
-            size={isMobile ? "small" : "medium"}
-            sx={{ 
-              borderRadius: 2,
-              textTransform: 'none',
-              fontWeight: 500,
-              px: { xs: 1.5, sm: 2 },
-              minWidth: { xs: 70, sm: 80 },
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-              color: theme.palette.info.main,
-              borderColor: theme.palette.info.main,
-              '&:hover': {
-                borderColor: theme.palette.info.dark,
-                backgroundColor: theme.palette.info.main + '10'
-              }
-            }}
-          >
-            Quiet (20%)
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={() => applyPreset(45)}
-            disabled={loading}
-            size={isMobile ? "small" : "medium"}
-            sx={{ 
-              borderRadius: 2,
-              textTransform: 'none',
-              fontWeight: 500,
-              px: { xs: 1.5, sm: 2 },
-              minWidth: { xs: 70, sm: 80 },
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-              color: theme.palette.warning.main,
-              borderColor: theme.palette.warning.main,
-              '&:hover': {
-                borderColor: theme.palette.warning.dark,
-                backgroundColor: theme.palette.warning.main + '10'
-              }
-            }}
-          >
-            Normal (45%)
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={() => applyPreset(95)}
-            disabled={loading}
-            size={isMobile ? "small" : "medium"}
-            sx={{ 
-              borderRadius: 2,
-              textTransform: 'none',
-              fontWeight: 500,
-              px: { xs: 1.5, sm: 2 },
-              minWidth: { xs: 70, sm: 80 },
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-              color: theme.palette.error.main,
-              borderColor: theme.palette.error.main,
-              '&:hover': {
-                borderColor: theme.palette.error.dark,
-                backgroundColor: theme.palette.error.main + '10'
-              }
-            }}
-          >
-            Turbo (95%)
-          </Button>
-        </Box>
-
         {/* Action Buttons - Modern Layout */}
         <Box sx={{ 
           display: 'flex', 
@@ -564,54 +487,6 @@ import {
             {notification.message}
           </Alert>
         </Snackbar>
-      </CardContent>
-    </Card>
-
-    {/* Debug Terminal Card */}
-    <Card sx={{ mb: 4 }}>
-      <CardContent>
-        <Typography variant="h6" sx={{ mb: 2 }}>
-          Debug Terminal
-        </Typography>
-        
-        <Paper 
-          sx={{ 
-            bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[900] : theme.palette.grey[100],
-            p: 2, 
-            height: 300, 
-            overflow: 'auto',
-            fontFamily: 'monospace',
-            fontSize: '0.875rem',
-            color: theme.palette.mode === 'dark' ? theme.palette.success.light : theme.palette.success.dark,
-            border: `1px solid ${theme.palette.divider}`
-          }}
-        >
-          {debugLogs.length === 0 ? (
-            <Typography sx={{ 
-              color: theme.palette.text.secondary, 
-              fontFamily: 'monospace' 
-            }}>
-              Waiting for fan control operations...
-            </Typography>
-          ) : (
-            debugLogs.map((log, index) => (
-              <Typography 
-                key={index} 
-                sx={{ 
-                  fontFamily: 'monospace', 
-                  fontSize: '0.875rem',
-                  color: log.includes('✗') ? theme.palette.error.main : 
-                         log.includes('✓') ? theme.palette.success.main : 
-                         log.includes('SSH Command:') ? theme.palette.warning.main : 
-                         theme.palette.mode === 'dark' ? theme.palette.success.light : theme.palette.success.dark,
-                  mb: 0.5
-                }}
-              >
-                {log}
-              </Typography>
-            ))
-          )}
-        </Paper>
       </CardContent>
     </Card>
     </>
@@ -814,10 +689,10 @@ function SafeSensorLimits() {
   );
 }
 
-export default function Controls() {
+export default function Controls({ onDebugLog }: { onDebugLog?: (message: string) => void }) {
   return (
     <Box>
-      <FanControls />
+      <FanControls onDebugLog={onDebugLog} />
       <SafeSensorLimits />
     </Box>
   );
