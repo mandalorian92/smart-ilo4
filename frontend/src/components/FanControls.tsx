@@ -103,8 +103,12 @@ import {
     // Enable edit all mode for clarity
     setEditAllMode(true);
     
-    // Show notification
+    // Add debug logging for preset application
     const presetName = speed === 20 ? 'Quiet' : speed === 45 ? 'Normal' : 'Turbo';
+    addDebugLog(`${presetName} preset applied - setting all fans to ${speed}%`);
+    addDebugLog(`Edit All mode automatically enabled for preset application`);
+    
+    // Show notification
     showNotification(`${presetName} preset applied (${speed}%)`, 'success');
   };
 
@@ -208,71 +212,94 @@ import {
   };
 
   return (
-    <>
-    <Card>
-      <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+    <Box component="section" role="main" aria-label="Fan Control System">
+      {/* HPE Page Header */}
+      <Box sx={{ mb: 4 }}>
         <Typography 
-          variant="h6" 
+          variant="h4" 
+          component="h1"
           sx={{ 
-            mb: 3,
-            fontSize: { xs: '1rem', sm: '1.125rem' }
+            fontSize: { xs: '1.5rem', sm: '2rem' },
+            fontWeight: 600,
+            mb: 0.5,
+            color: 'text.primary'
           }}
         >
-          Fan Controller
-          {loading && <CircularProgress size={20} sx={{ ml: 2 }} />}
+          Fan Control System
+          {loading && <CircularProgress size={24} sx={{ ml: 2 }} />}
         </Typography>
-        
-        {/* Control Panel Header */}
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: { xs: 'column', sm: 'row' },
-          justifyContent: 'space-between', 
-          alignItems: { xs: 'stretch', sm: 'center' }, 
-          mb: 3,
-          p: { xs: 1.5, sm: 2 },
-          borderRadius: 2,
-          bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+        <Typography 
+          variant="body1" 
+          color="text.secondary"
+          sx={{ 
+            fontSize: { xs: '0.875rem', sm: '1rem' },
+            mb: 0
+          }}
+        >
+          Monitor and control system cooling fans with precision speed management
+        </Typography>
+      </Box>
+
+      {/* Fan Speed Presets - HPE Action Bar */}
+      <Card 
+        elevation={0}
+        sx={{ 
+          mb: 4,
           border: `1px solid ${theme.palette.divider}`,
-          gap: { xs: 2, sm: 0 }
-        }}>
-          <FormControlLabel
-            control={
-              <Switch 
-                checked={editAllMode} 
-                onChange={(e) => setEditAllMode(e.target.checked)}
-                size={isMobile ? "small" : "medium"}
-              />
-            }
-            label={
-              <Typography variant="body1" sx={{ 
-                fontWeight: 500,
-                fontSize: { xs: '0.875rem', sm: '1rem' }
-              }}>
-                Edit All Fans
-              </Typography>
-            }
-          />
+          borderRadius: 2
+        }}
+      >
+        <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
+          {/* Header Section */}
+          <Box sx={{ mb: 3 }}>
+            <Typography 
+              variant="h6" 
+              component="h2"
+              sx={{ 
+                fontSize: { xs: '1rem', sm: '1.125rem' },
+                fontWeight: 600,
+                mb: 0.5,
+                color: 'text.primary'
+              }}
+            >
+              Quick Presets
+            </Typography>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                color: 'text.secondary'
+              }}
+            >
+              Apply predefined fan speed configurations
+            </Typography>
+          </Box>
           
-          {/* Preset Buttons - Modern Chip Style */}
+          {/* Content Section - Preset Buttons */}
           <Box sx={{ 
             display: 'flex', 
-            gap: 1,
-            flexWrap: { xs: 'wrap', sm: 'nowrap' },
-            justifyContent: { xs: 'center', sm: 'flex-end' }
+            gap: 2,
+            flexWrap: 'wrap',
+            justifyContent: { xs: 'center', sm: 'flex-start' }
           }}>
             <Button 
               onClick={() => applyPreset(20)}
               variant="outlined"
-              size={isMobile ? "small" : "medium"}
+              size={isMobile ? "medium" : "large"}
               color="info"
               disabled={loading}
               sx={{ 
-                borderRadius: 3,
+                borderRadius: 2,
                 textTransform: 'none',
                 fontWeight: 500,
-                minWidth: 'auto',
-                px: { xs: 1.5, sm: 2 },
-                fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                px: 3,
+                py: 1.5,
+                minWidth: 120,
+                fontSize: { xs: '0.875rem', sm: '1rem' },
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: 2
+                }
               }}
             >
               Quiet
@@ -280,16 +307,21 @@ import {
             <Button 
               onClick={() => applyPreset(45)}
               variant="outlined"
-              size={isMobile ? "small" : "medium"}
+              size={isMobile ? "medium" : "large"}
               color="success"
               disabled={loading}
               sx={{ 
-                borderRadius: 3,
+                borderRadius: 2,
                 textTransform: 'none',
                 fontWeight: 500,
-                minWidth: 'auto',
-                px: { xs: 1.5, sm: 2 },
-                fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                px: 3,
+                py: 1.5,
+                minWidth: 120,
+                fontSize: { xs: '0.875rem', sm: '1rem' },
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: 2
+                }
               }}
             >
               Normal
@@ -297,212 +329,284 @@ import {
             <Button 
               onClick={() => applyPreset(95)}
               variant="outlined"
-              size={isMobile ? "small" : "medium"}
+              size={isMobile ? "medium" : "large"}
               color="error"
               disabled={loading}
               sx={{ 
-                borderRadius: 3,
+                borderRadius: 2,
                 textTransform: 'none',
                 fontWeight: 500,
-                minWidth: 'auto',
-                px: { xs: 1.5, sm: 2 },
-                fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                px: 3,
+                py: 1.5,
+                minWidth: 120,
+                fontSize: { xs: '0.875rem', sm: '1rem' },
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: 2
+                }
               }}
             >
               Turbo
             </Button>
           </Box>
-        </Box>
+        </CardContent>
+      </Card>
 
-        {/* Fan Controls Grid */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.secondary }}>
-            Individual Fan Controls
-          </Typography>
-          <Grid container spacing={2}>
+      {/* Individual Fan Controls - HPE Content Grid */}
+      <Card 
+        elevation={0}
+        sx={{ 
+          mb: 4,
+          border: `1px solid ${theme.palette.divider}`,
+          borderRadius: 2
+        }}
+      >
+        <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
+          {/* Header Section */}
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'flex-start',
+            mb: 3
+          }}>
+            <Box>
+              <Typography 
+                variant="h6" 
+                component="h2"
+                sx={{ 
+                  fontSize: { xs: '1rem', sm: '1.125rem' },
+                  fontWeight: 600,
+                  mb: 0.5,
+                  color: 'text.primary'
+                }}
+              >
+                Fan Control
+              </Typography>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                  color: 'text.secondary'
+                }}
+              >
+                Fine-tune individual fan speeds for optimal cooling performance
+              </Typography>
+            </Box>
+            <FormControlLabel
+              control={
+                <Switch 
+                  checked={editAllMode} 
+                  onChange={(e) => setEditAllMode(e.target.checked)}
+                  size={isMobile ? "small" : "medium"}
+                />
+              }
+              label={
+                <Typography variant="body2" sx={{ 
+                  fontWeight: 500,
+                  fontSize: { xs: '0.8rem', sm: '0.875rem' }
+                }}>
+                  Edit All
+                </Typography>
+              }
+            />
+          </Box>
+          
+          {/* Content Section - Fan Control Grid */}
+          <Grid container spacing={3}>
             {fans.map((fan) => (
               <Grid item xs={12} key={fan.name}>
-                <Paper 
+                <Card 
                   elevation={0}
                   sx={{ 
-                    p: 2, 
-                    borderRadius: 2,
                     border: `1px solid ${theme.palette.divider}`,
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.01)'
+                    borderRadius: 2,
+                    transition: 'all 0.2s ease-in-out',
+                    '&:hover': {
+                      borderColor: theme.palette.primary.main,
+                      boxShadow: `0 4px 12px ${theme.palette.primary.main}15`
+                    }
                   }}
                 >
-                  <Box sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: { xs: 1, sm: 2 }, // Responsive gap
-                    flexDirection: { xs: 'column', sm: 'row' }, // Stack on mobile
-                    '& > *': {
-                      width: { xs: '100%', sm: 'auto' } // Full width on mobile
-                    }
-                  }}>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
-                        minWidth: { xs: 'auto', sm: 100 },
-                        width: { xs: '100%', sm: 'auto' },
-                        textAlign: { xs: 'center', sm: 'left' },
-                        fontWeight: 500,
-                        color: theme.palette.text.primary,
-                        mb: { xs: 1, sm: 0 }
-                      }}
-                    >
-                      {fan.name}
-                    </Typography>
+                  <CardContent sx={{ p: 3 }}>
+                    {/* Fan Card Header */}
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      mb: 2
+                    }}>
+                      <Typography 
+                        variant="subtitle1" 
+                        sx={{ 
+                          fontWeight: 600,
+                          color: 'text.primary'
+                        }}
+                      >
+                        {fan.name}
+                      </Typography>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: 'text.secondary',
+                          fontSize: '0.875rem'
+                        }}
+                      >
+                        Current: {fan.speed}% • Status: {fan.health}
+                      </Typography>
+                    </Box>
+                    
+                    {/* Fan Control Content */}
                     <Box sx={{ 
                       display: 'flex', 
                       alignItems: 'center', 
-                      gap: 2, 
-                      flex: 1,
-                      minWidth: { xs: '100%', sm: 'auto' }
+                      gap: 3
                     }}>
                       <Slider
-                      value={Math.max(10, fanSpeeds[fan.name] || fan.speed)}
-                      onChange={(_, value) => handleFanSpeedChange(fan.name, value as number)}
-                      min={10}
-                      max={100}
-                      sx={{ 
-                        flex: 1,
-                        mx: 1,
-                        '& .MuiSlider-thumb': { 
-                          width: 20, 
-                          height: 20,
-                          '&:hover': {
-                            boxShadow: `0 0 0 8px ${theme.palette.primary.main}20`
-                          }
-                        },
-                        '& .MuiSlider-track': { 
-                          height: 6,
-                          borderRadius: 3
-                        },
-                        '& .MuiSlider-rail': { 
-                          height: 6,
-                          borderRadius: 3,
-                          opacity: 0.3
-                        }
-                      }}
-                    />
-                    <TextField
-                      value={Math.max(10, fanSpeeds[fan.name] || fan.speed)}
-                      onChange={(e) => handleFanSpeedChange(fan.name, Math.max(10, parseInt(e.target.value) || 10))}
-                      type="number"
-                      inputProps={{ min: 10, max: 100 }}
-                      size="small"
-                      variant="outlined"
-                      sx={{ 
-                        width: 90, // Increased from 80 to 90
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 2,
-                          '& fieldset': { 
-                            borderColor: theme.palette.divider 
+                        value={Math.max(10, fanSpeeds[fan.name] || fan.speed)}
+                        onChange={(_, value) => handleFanSpeedChange(fan.name, value as number)}
+                        min={10}
+                        max={100}
+                        sx={{ 
+                          flex: 1,
+                          '& .MuiSlider-thumb': { 
+                            width: 24, 
+                            height: 24,
+                            '&:hover': {
+                              boxShadow: `0 0 0 8px ${theme.palette.primary.main}20`
+                            }
                           },
-                          '&:hover fieldset': { 
-                            borderColor: theme.palette.primary.main 
+                          '& .MuiSlider-track': { 
+                            height: 8,
+                            borderRadius: 4
                           },
-                          '&.Mui-focused fieldset': { 
-                            borderColor: theme.palette.primary.main 
+                          '& .MuiSlider-rail': { 
+                            height: 8,
+                            borderRadius: 4,
+                            opacity: 0.3
                           }
-                        },
-                        '& .MuiInputBase-input': {
-                          textAlign: 'center', // Center the text
-                          paddingRight: '8px !important', // Add padding to prevent overlap with arrows
-                          fontSize: '0.875rem'
-                        }
-                      }}
-                      InputProps={{
-                        endAdornment: <Typography variant="body2" sx={{ 
-                          color: theme.palette.text.secondary, 
-                          mr: 0.5, // Reduced margin
-                          fontSize: '0.75rem', // Smaller font for %
-                          minWidth: '12px' // Ensure consistent width
-                        }}>%</Typography>
-                      }}
-                    />
+                        }}
+                      />
+                      <TextField
+                        value={Math.max(10, fanSpeeds[fan.name] || fan.speed)}
+                        onChange={(e) => handleFanSpeedChange(fan.name, Math.max(10, parseInt(e.target.value) || 10))}
+                        type="number"
+                        inputProps={{ min: 10, max: 100 }}
+                        size="small"
+                        variant="outlined"
+                        sx={{ 
+                          width: 100,
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 2
+                          },
+                          '& .MuiInputBase-input': {
+                            textAlign: 'center',
+                            fontSize: '0.875rem'
+                          }
+                        }}
+                        InputProps={{
+                          endAdornment: <Typography variant="body2" sx={{ 
+                            color: 'text.secondary', 
+                            fontSize: '0.75rem'
+                          }}>%</Typography>
+                        }}
+                      />
                     </Box>
-                  </Box>
-                </Paper>
+                  </CardContent>
+                </Card>
               </Grid>
             ))}
           </Grid>
-        </Box>
+          
+          {/* Footer Section - Action Buttons */}
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: 2, 
+            justifyContent: 'flex-end',
+            pt: 3,
+            mt: 3,
+            borderTop: `1px solid ${theme.palette.divider}`
+          }}>
+            <Button
+              variant="outlined"
+              onClick={handleUnlock}
+              disabled={loading}
+              size="large"
+              sx={{ 
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 500,
+                px: 4,
+                py: 1.5,
+                fontSize: '1rem'
+              }}
+            >
+              Unlock Fans
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleUpdate}
+              disabled={loading}
+              size="large"
+              sx={{ 
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 500,
+                px: 4,
+                py: 1.5,
+                boxShadow: 2,
+                fontSize: '1rem',
+                '&:hover': {
+                  boxShadow: 4,
+                  transform: 'translateY(-2px)'
+                }
+              }}
+            >
+              {loading ? <CircularProgress size={20} sx={{ mr: 1 }} /> : null}
+              {loading ? 'Applying Changes...' : 'Apply Changes'}
+            </Button>
+          </Box>
+        </CardContent>
+      </Card>
 
-        {/* Action Buttons - Modern Layout */}
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: { xs: 'column', sm: 'row' },
-          gap: { xs: 1.5, sm: 2 }, 
-          justifyContent: 'flex-end',
-          pt: 2,
-          borderTop: `1px solid ${theme.palette.divider}`
-        }}>
-          <Button
-            variant="outlined"
-            onClick={handleUnlock}
-            disabled={loading}
-            size={isMobile ? "medium" : "large"}
-            sx={{ 
-              borderRadius: 2,
-              textTransform: 'none',
-              fontWeight: 500,
-              px: 3,
-              fontSize: { xs: '0.875rem', sm: '1rem' }
-            }}
-          >
-            Unlock Fans
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleUpdate}
-            disabled={loading}
-            size={isMobile ? "medium" : "large"}
-            sx={{ 
-              borderRadius: 2,
-              textTransform: 'none',
-              fontWeight: 500,
-              px: 3,
-              boxShadow: 2,
-              fontSize: { xs: '0.875rem', sm: '1rem' },
-              '&:hover': {
-                boxShadow: 4
-              }
-            }}
-          >
-            {loading ? <CircularProgress size={20} sx={{ mr: 1 }} /> : null}
-            {loading ? 'Updating...' : 'Apply Changes'}
-          </Button>
-        </Box>
-
-        {/* Notification Snackbar */}
-        <Snackbar
-          open={notification.open}
-          autoHideDuration={6000}
-          onClose={closeNotification}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        >
-          <Alert onClose={closeNotification} severity={notification.severity} sx={{ width: '100%' }}>
-            {notification.message}
-          </Alert>
-        </Snackbar>
-      </CardContent>
-    </Card>
-    </>
+      {/* Notification Snackbar */}
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={closeNotification}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert onClose={closeNotification} severity={notification.severity} sx={{ width: '100%' }}>
+          {notification.message}
+        </Alert>
+      </Snackbar>
+    </Box>
   );
 }
 
-function SafeSensorLimits() {
+function SafeSensorLimits({ onDebugLog }: { onDebugLog?: (message: string) => void }) {
   const [sensors, setSensors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSensor, setSelectedSensor] = useState("");
-  const [lowLimit, setLowLimit] = useState(20); // Now in percentage (20%)
+  const [lowLimit, setLowLimit] = useState(20);
   const [notification, setNotification] = useState<{
     open: boolean;
     message: string;
     severity: 'success' | 'error' | 'info' | 'warning';
   }>({ open: false, message: '', severity: 'info' });
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  const addDebugLog = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    const logMessage = `[${timestamp}] ${message}`;
+    
+    // Call the external callback if provided
+    if (onDebugLog) {
+      onDebugLog(logMessage);
+    }
+  };
 
   useEffect(() => {
     async function fetchSensors() {
@@ -531,6 +635,7 @@ function SafeSensorLimits() {
 
   const handleSetLowLimit = async () => {
     if (!selectedSensor) {
+      addDebugLog('❌ Sensor configuration failed: No sensor selected');
       setNotification({
         open: true,
         message: 'Please select a sensor first',
@@ -540,21 +645,24 @@ function SafeSensorLimits() {
     }
 
     try {
-      // Extract sensor ID from the sensor name or use a mapping
-      // For now, we'll use the sensor index or name as ID
       const sensorIndex = sensors.findIndex(s => s.name === selectedSensor);
-      const sensorId = sensorIndex + 1; // Assuming 1-based indexing
-      
-      // Multiply by 100 for iLO command (20% becomes 2000)
+      const sensorId = sensorIndex + 1;
       const iloValue = lowLimit * 100;
       
+      addDebugLog(`Starting sensor configuration for: ${selectedSensor}`);
+      addDebugLog(`Sensor ID: ${sensorId}, Low limit: ${lowLimit}%, iLO value: ${iloValue}`);
+      
       await setSensorLowLimit(sensorId, iloValue);
+      
+      addDebugLog(`✓ Sensor configuration successful: ${selectedSensor} low limit set to ${lowLimit}%`);
       setNotification({
         open: true,
         message: `Low limit set to ${lowLimit}% for ${selectedSensor}`,
         severity: 'success'
       });
     } catch (error) {
+      const errorMsg = (error as any).response?.data?.error || (error as Error).message;
+      addDebugLog(`✗ Sensor configuration failed: ${errorMsg}`);
       console.error('Failed to set low limit:', error);
       setNotification({
         open: true,
@@ -568,132 +676,146 @@ function SafeSensorLimits() {
     setNotification({ ...notification, open: false });
   };
 
-  if (loading) return <CircularProgress />;
+  if (loading) return (
+    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+      <CircularProgress />
+    </Box>
+  );
 
   return (
-    <>
-      <Card sx={{ mb: 4 }}>
-        <CardContent sx={{ p: 3 }}>
-          {/* Header Section */}
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h5" gutterBottom sx={{ mb: 1, fontWeight: 600 }}>
-              Sensor Configuration
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 0 }}>
-              Configure threshold limits for environmental sensors
-            </Typography>
-          </Box>
+    <Card 
+      elevation={0}
+      sx={{ 
+        border: `1px solid ${theme.palette.divider}`,
+        borderRadius: 2
+      }}
+    >
+      <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
+        {/* Header Section */}
+        <Box sx={{ mb: 3 }}>
+          <Typography 
+            variant="h6" 
+            component="h2"
+            sx={{ 
+              fontSize: { xs: '1rem', sm: '1.125rem' },
+              fontWeight: 600,
+              mb: 0.5,
+              color: 'text.primary'
+            }}
+          >
+            Sensor Configuration
+          </Typography>
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              fontSize: { xs: '0.8rem', sm: '0.875rem' },
+              color: 'text.secondary'
+            }}
+          >
+            Configure threshold limits for environmental sensors
+          </Typography>
+        </Box>
 
-          {/* Form Section */}
-          <Box component="form" noValidate>
-            <Grid container spacing={3}>
-              {/* Sensor Selection */}
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth variant="outlined">
-                  <InputLabel id="sensor-select-label">Sensor</InputLabel>
-                  <Select
-                    labelId="sensor-select-label"
-                    value={selectedSensor}
-                    label="Sensor"
-                    onChange={(e) => setSelectedSensor(e.target.value)}
-                    sx={{ 
-                      '& .MuiSelect-select': {
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1
-                      }
-                    }}
-                  >
-                    {sensors.map((sensor) => (
-                      <MenuItem key={sensor.name} value={sensor.name}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                            {sensor.name}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            ({sensor.reading}°C)
-                          </Typography>
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
+        {/* Content Section - Form */}
+        <Grid container spacing={3} alignItems="end">
+          <Grid item xs={12} sm={6}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel id="sensor-select-label">Select Sensor</InputLabel>
+              <Select
+                labelId="sensor-select-label"
+                value={selectedSensor}
+                label="Select Sensor"
+                onChange={(e) => setSelectedSensor(e.target.value)}
+                sx={{ 
+                  '& .MuiSelect-select': {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
+                  }
+                }}
+              >
+                {sensors.map((sensor) => (
+                  <MenuItem key={sensor.name} value={sensor.name}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {sensor.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        ({sensor.reading}°C)
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
 
-              {/* Low Limit Input */}
-              <Grid item xs={12} md={3}>
-                <TextField
-                  label="Low Limit"
-                  type="number"
-                  value={lowLimit}
-                  onChange={(e) => setLowLimit(parseInt(e.target.value) || 20)}
-                  fullWidth
-                  variant="outlined"
-                  InputProps={{
-                    endAdornment: <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>%</Typography>
-                  }}
-                  inputProps={{ min: 10, max: 100, step: 1 }}
-                  sx={{
-                    '& .MuiInputBase-input': {
-                      textAlign: 'right',
-                      pr: 0.5
-                    }
-                  }}
-                />
-              </Grid>
+          <Grid item xs={12} sm={3}>
+            <TextField
+              label="Low Limit"
+              type="number"
+              value={lowLimit}
+              onChange={(e) => setLowLimit(parseInt(e.target.value) || 20)}
+              fullWidth
+              variant="outlined"
+              InputProps={{
+                endAdornment: <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>%</Typography>
+              }}
+              inputProps={{ min: 10, max: 100, step: 1 }}
+              sx={{
+                '& .MuiInputBase-input': {
+                  textAlign: 'right',
+                  pr: 0.5
+                }
+              }}
+            />
+          </Grid>
 
-              {/* Action Button */}
-              <Grid item xs={12} md={3} sx={{ display: 'flex', alignItems: 'end' }}>
-                <Button
-                  variant="contained"
-                  onClick={handleSetLowLimit}
-                  disabled={!selectedSensor}
-                  fullWidth
-                  size="large"
-                  sx={{ 
-                    height: 56, // Match input field height
-                    borderRadius: 2,
-                    textTransform: 'none',
-                    fontWeight: 500,
-                    px: 3,
-                    boxShadow: 2,
-                    '&:hover': {
-                      boxShadow: 4
-                    }
-                  }}
-                >
-                  Apply Changes
-                </Button>
-              </Grid>
-            </Grid>
-          </Box>
-        </CardContent>
-      </Card>
-      
-      <Snackbar
-        open={notification.open}
-        autoHideDuration={6000}
-        onClose={handleCloseNotification}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert 
-          onClose={handleCloseNotification} 
-          severity={notification.severity}
-          sx={{ width: '100%' }}
-          variant="filled"
+          <Grid item xs={12} sm={3}>
+            <Button
+              variant="contained"
+              onClick={handleSetLowLimit}
+              disabled={!selectedSensor}
+              fullWidth
+              size="large"
+              sx={{ 
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 500,
+                py: 1.5,
+                fontSize: '1rem',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: 4
+                }
+              }}
+            >
+              Set Limit
+            </Button>
+          </Grid>
+        </Grid>
+
+        {/* Notification Snackbar */}
+        <Snackbar
+          open={notification.open}
+          autoHideDuration={4000}
+          onClose={handleCloseNotification}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         >
-          {notification.message}
-        </Alert>
-      </Snackbar>
-    </>
+          <Alert onClose={handleCloseNotification} severity={notification.severity} sx={{ width: '100%' }}>
+            {notification.message}
+          </Alert>
+        </Snackbar>
+      </CardContent>
+    </Card>
   );
 }
 
 export default function Controls({ onDebugLog }: { onDebugLog?: (message: string) => void }) {
   return (
-    <Box>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <FanControls onDebugLog={onDebugLog} />
-      <SafeSensorLimits />
+      <SafeSensorLimits onDebugLog={onDebugLog} />
     </Box>
   );
 }

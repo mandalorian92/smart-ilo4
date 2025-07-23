@@ -1,79 +1,290 @@
 import React, { useEffect, useState } from "react";
 import { getSensors, overrideSensor, resetSensors } from "../api";
-import { Card, CardContent, Typography, Button, MenuItem, Select, TextField, Grid, CircularProgress } from "@mui/material";
+import { 
+  Card, 
+  CardContent, 
+  Typography, 
+  Button, 
+  MenuItem, 
+  Select, 
+  TextField, 
+  Grid, 
+  CircularProgress,
+  Box,
+  FormControl,
+  InputLabel,
+  useTheme,
+  useMediaQuery,
+  Alert,
+  Snackbar
+} from "@mui/material";
+import SettingsIcon from '@mui/icons-material/Settings';
+import RefreshIcon from '@mui/icons-material/Refresh';
 
 function Controls() {
   const [sensors, setSensors] = useState<any[]>([]);
   const [selected, setSelected] = useState<string>("");
   const [value, setValue] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [notification, setNotification] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'info' | 'warning';
+  }>({ open: false, message: '', severity: 'info' });
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   useEffect(() => {
     async function fetchSensors() {
       setLoading(true);
-      const data = await getSensors();
-      setSensors(data);
-      setLoading(false);
+      try {
+        const data = await getSensors();
+        setSensors(data);
+      } catch (error) {
+        console.error('Failed to fetch sensors:', error);
+        setNotification({
+          open: true,
+          message: 'Failed to fetch sensors',
+          severity: 'error'
+        });
+      } finally {
+        setLoading(false);
+      }
     }
     fetchSensors();
   }, []);
 
   const handleOverride = async () => {
-    if (!selected) return;
-    await overrideSensor(selected, value);
-    alert("Sensor overridden");
+    if (!selected) {
+      setNotification({
+        open: true,
+        message: 'Please select a sensor first',
+        severity: 'warning'
+      });
+      return;
+    }
+    
+    try {
+      await overrideSensor(selected, value);
+      setNotification({
+        open: true,
+        message: `Sensor ${selected} overridden to ${value}°C`,
+        severity: 'success'
+      });
+    } catch (error) {
+      console.error('Failed to override sensor:', error);
+      setNotification({
+        open: true,
+        message: 'Failed to override sensor',
+        severity: 'error'
+      });
+    }
   };
 
   const handleReset = async () => {
-    await resetSensors();
-    alert("Sensors reset to default");
+    try {
+      await resetSensors();
+      setNotification({
+        open: true,
+        message: 'All sensors reset to default values',
+        severity: 'success'
+      });
+    } catch (error) {
+      console.error('Failed to reset sensors:', error);
+      setNotification({
+        open: true,
+        message: 'Failed to reset sensors',
+        severity: 'error'
+      });
+    }
   };
 
-  if (loading) return <CircularProgress />;
+  const handleCloseNotification = () => {
+    setNotification({ ...notification, open: false });
+  };
+
+  if (loading) return (
+    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+      <CircularProgress />
+    </Box>
+  );
 
   return (
-    <Card sx={{ mb: 4 }}>
-      <CardContent>
-        <Typography variant="h5" gutterBottom>
-          Override Sensors / Reset
+    <Box component="section" role="main" aria-label="Sensor Override Controls">
+      {/* Page Header */}
+      <Box sx={{ mb: 4 }}>
+        <Typography 
+          variant="h4" 
+          component="h1"
+          sx={{ 
+            fontSize: { xs: '1.5rem', sm: '2rem' },
+            fontWeight: 600,
+            mb: 0.5,
+            color: 'text.primary',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.5
+          }}
+        >
+          <SettingsIcon sx={{ fontSize: { xs: 28, sm: 32 } }} />
+          Sensor Override System
         </Typography>
-        <Grid container spacing={2} alignItems="center">
-          <Grid item>
-            <Select
-              value={selected}
-              onChange={(e) => setSelected(e.target.value)}
-              displayEmpty
-              sx={{ minWidth: 160 }}
+        <Typography 
+          variant="body1" 
+          color="text.secondary"
+          sx={{ 
+            fontSize: { xs: '0.875rem', sm: '1rem' },
+            mb: 0
+          }}
+        >
+          Override individual sensor readings and reset system configurations
+        </Typography>
+      </Box>
+
+      {/* Sensor Override Controls - Content Layout */}
+      <Card 
+        elevation={0}
+        sx={{ 
+          border: `1px solid ${theme.palette.divider}`,
+          borderRadius: 2
+        }}
+      >
+        <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
+          {/* Header Section */}
+          <Box sx={{ mb: 3 }}>
+            <Typography 
+              variant="h6" 
+              component="h2"
+              sx={{ 
+                fontSize: { xs: '1rem', sm: '1.125rem' },
+                fontWeight: 600,
+                mb: 0.5,
+                color: 'text.primary'
+              }}
             >
-              <MenuItem value="">Select Sensor</MenuItem>
-              {sensors.map((s) => (
-                <MenuItem key={s.name} value={s.name}>
-                  {s.name}
-                </MenuItem>
-              ))}
-            </Select>
+              Sensor Override
+            </Typography>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                color: 'text.secondary'
+              }}
+            >
+              Temporarily override sensor readings for testing and calibration
+            </Typography>
+          </Box>
+          
+          {/* Content Section - Form Controls */}
+          <Grid container spacing={3} alignItems="end">
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth variant="outlined">
+                <InputLabel id="sensor-select-label">Select Sensor</InputLabel>
+                <Select
+                  labelId="sensor-select-label"
+                  value={selected}
+                  label="Select Sensor"
+                  onChange={(e) => setSelected(e.target.value)}
+                >
+                  {sensors.map((s) => (
+                    <MenuItem key={s.name} value={s.name}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {s.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          (Current: {s.reading}°C)
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} sm={3}>
+              <TextField
+                label="Override Value"
+                type="number"
+                value={value}
+                onChange={(e) => setValue(Number(e.target.value))}
+                fullWidth
+                variant="outlined"
+                InputProps={{
+                  endAdornment: <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>°C</Typography>
+                }}
+                inputProps={{ step: 0.1 }}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    textAlign: 'right',
+                    pr: 0.5
+                  }
+                }}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={2}>
+              <Button
+                variant="contained"
+                onClick={handleOverride}
+                disabled={!selected}
+                fullWidth
+                size="large"
+                sx={{ 
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  py: 1.5,
+                  fontSize: '1rem',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: 4
+                  }
+                }}
+              >
+                Override
+              </Button>
+            </Grid>
+            
+            <Grid item xs={12} sm={3}>
+              <Button
+                variant="outlined"
+                onClick={handleReset}
+                fullWidth
+                size="large"
+                sx={{ 
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  py: 1.5,
+                  fontSize: '1rem',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: 2
+                  }
+                }}
+                startIcon={<RefreshIcon />}
+              >
+                Reset All Sensors
+              </Button>
+            </Grid>
           </Grid>
-          <Grid item>
-            <TextField
-              type="number"
-              label="Override Value"
-              value={value}
-              onChange={(e) => setValue(Number(e.target.value))}
-            />
-          </Grid>
-          <Grid item>
-            <Button variant="contained" onClick={handleOverride} disabled={!selected}>
-              Override
-            </Button>
-          </Grid>
-          <Grid item>
-            <Button variant="outlined" color="secondary" onClick={handleReset}>
-              Reset Sensors
-            </Button>
-          </Grid>
-        </Grid>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      {/* Notification Snackbar */}
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={4000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert onClose={handleCloseNotification} severity={notification.severity} sx={{ width: '100%' }}>
+          {notification.message}
+        </Alert>
+      </Snackbar>
+    </Box>
   );
 }
 

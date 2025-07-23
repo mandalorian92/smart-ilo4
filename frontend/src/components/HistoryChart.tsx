@@ -65,7 +65,6 @@ type HistoryPoint = {
 function HistoryChart() {
   const [historyData, setHistoryData] = useState<HistoryPoint[]>([]);
   const [availableSensors, setAvailableSensors] = useState<SensorInfo[]>([]);
-  const [selectedSensors, setSelectedSensors] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [showFahrenheit, setShowFahrenheit] = useState(false);
@@ -94,6 +93,27 @@ function HistoryChart() {
 
   const getTemperatureUnit = () => showFahrenheit ? '°F' : '°C';
 
+  // Function to categorize sensors
+  const categorizeSensors = (sensors: SensorInfo[]) => {
+    const systemSensors: SensorInfo[] = [];
+    const peripheralSensors: SensorInfo[] = [];
+
+    sensors.forEach(sensor => {
+      // Extract sensor number from name (e.g., "01-Inlet Ambient" -> 1)
+      const sensorNumberMatch = sensor.name.match(/^(\d+)-/);
+      const sensorNumber = sensorNumberMatch ? parseInt(sensorNumberMatch[1]) : null;
+      
+      // System sensors: sensors 01 to 17
+      if (sensorNumber && sensorNumber >= 1 && sensorNumber <= 17) {
+        systemSensors.push(sensor);
+      } else {
+        peripheralSensors.push(sensor);
+      }
+    });
+
+    return { systemSensors, peripheralSensors };
+  };
+
   useEffect(() => {
     async function fetchData() {
       try {
@@ -109,51 +129,7 @@ function HistoryChart() {
         const sensorsData = sensorsResponse.sensors || sensorsResponse; // Handle both old and new formats
         setAvailableSensors(sensorsData);
         
-        // Only set default sensors on initial load, not on updates
-        if (isInitialLoad) {
-          // Get sensor numbers that correspond to active PIDs
-          const activePidNumbers = activePids.map((pid: PidInfo) => pid.number);
-          
-          // Find sensors that correspond to active PIDs or have active readings
-          const activeSensors = sensorsData
-            .filter((sensor: SensorInfo) => {
-              // Extract sensor number from name if possible (e.g., "01-Inlet Ambient" -> 1)
-              const sensorNumberMatch = sensor.name.match(/^(\d+)-/);
-              const sensorNumber = sensorNumberMatch ? parseInt(sensorNumberMatch[1]) : null;
-              
-              // Include if:
-              // 1. Sensor number matches an active PID
-              // 2. Sensor has active reading and is important type
-              const matchesActivePid = sensorNumber && activePidNumbers.includes(sensorNumber);
-              const hasActiveReading = sensor.currentReading > 0;
-              const isImportantSensor = 
-                sensor.name.toLowerCase().includes('cpu') ||
-                sensor.name.toLowerCase().includes('system') ||
-                sensor.name.toLowerCase().includes('ambient') ||
-                sensor.name.toLowerCase().includes('inlet') ||
-                sensor.name.toLowerCase().includes('exhaust') ||
-                sensor.name.toLowerCase().includes('chipset');
-              
-              return matchesActivePid || (hasActiveReading && isImportantSensor);
-            })
-            .map((sensor: SensorInfo) => sensor.name)
-            .slice(0, 6); // Show up to 6 sensors by default
-          
-          // If no sensors found using PID logic, fall back to CPU sensors
-          if (activeSensors.length === 0) {
-            const cpuSensors = sensorsData
-              .filter((sensor: SensorInfo) => 
-                sensor.context === 'CPU' || sensor.name.toLowerCase().includes('cpu')
-              )
-              .map((sensor: SensorInfo) => sensor.name)
-              .slice(0, 3);
-            setSelectedSensors(cpuSensors);
-          } else {
-            setSelectedSensors(activeSensors);
-          }
-          
-          setIsInitialLoad(false);
-        }
+        setIsInitialLoad(false);
       } catch (error) {
         console.error('Failed to fetch data:', error);
       } finally {
@@ -169,11 +145,6 @@ function HistoryChart() {
     return () => clearInterval(interval);
   }, [isInitialLoad]);
 
-  const handleSensorChange = (event: SelectChangeEvent<typeof selectedSensors>) => {
-    const value = event.target.value;
-    setSelectedSensors(typeof value === 'string' ? value.split(',') : value);
-  };
-
   if (loading) return <CircularProgress />;
 
   if (historyData.length === 0) {
@@ -181,7 +152,7 @@ function HistoryChart() {
       <Card sx={{ mb: 4 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            Temperature History
+            System Temperature
           </Typography>
           <Typography color="text.secondary">
             No history data available yet. Please wait for the system to collect temperature readings.
@@ -191,40 +162,46 @@ function HistoryChart() {
     );
   }
 
-  // Prepare chart data
+  // Categorize sensors
+  const { systemSensors, peripheralSensors } = categorizeSensors(availableSensors);
+
+  // Prepare chart data labels with improved time formatting
   const labels = historyData.map(point => {
-    // Use the timestamp for proper timezone handling
     const date = new Date(point.timestamp);
     return date.toLocaleTimeString([], { 
       hour: '2-digit', 
-      minute: '2-digit',
-      timeZoneName: 'short'
+      minute: '2-digit'
+      // Removed timeZoneName to avoid timezone display
     });
   });
 
-  const colors = generateColors(selectedSensors.length);
-  
-  const datasets = selectedSensors.map((sensorName, index) => ({
-    label: sensorName,
-    data: historyData.map(point => {
-      const reading = point.sensors[sensorName];
-      return reading !== undefined ? convertTemperature(reading) : null;
-    }),
-    fill: false,
-    borderColor: colors[index],
-    backgroundColor: colors[index],
-    tension: 0.1,
-    pointRadius: 2,
-    pointHoverRadius: 4,
-    borderWidth: 2
-  }));
+  // Create chart data for system sensors
+  const createChartData = (sensors: SensorInfo[]) => {
+    const colors = generateColors(sensors.length);
+    
+    const datasets = sensors.map((sensor, index) => ({
+      label: sensor.name,
+      data: historyData.map(point => {
+        const reading = point.sensors[sensor.name];
+        return reading !== undefined ? convertTemperature(reading) : null;
+      }),
+      fill: false,
+      borderColor: colors[index],
+      backgroundColor: colors[index],
+      tension: 0.1,
+      pointRadius: 2,
+      pointHoverRadius: 4,
+      borderWidth: 2
+    }));
 
-  const chartData = {
-    labels,
-    datasets
+    return {
+      labels,
+      datasets
+    };
   };
 
-  const chartOptions = {
+  // Chart options with improved time grid
+  const createChartOptions = (title: string) => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -275,7 +252,10 @@ function HistoryChart() {
           maxRotation: isMobile ? 45 : 30,
           font: {
             size: isMobile ? 9 : 11
-          }
+          },
+          // Show every 5 minutes instead of every minute
+          maxTicksLimit: 12, // Limit to about 12 ticks (every 5 minutes for an hour)
+          autoSkip: true
         },
         grid: {
           color: theme.palette.divider,
@@ -316,10 +296,18 @@ function HistoryChart() {
         borderWidth: isMobile ? 1.5 : 2 // Thinner lines on mobile
       }
     }
-  };
+  });
 
-  return (
-    <Card>
+  const systemChartData = createChartData(systemSensors);
+  const peripheralChartData = createChartData(peripheralSensors);
+
+  const renderTemperatureCard = (
+    title: string,
+    chartData: any,
+    sensors: SensorInfo[],
+    isFirst: boolean = false
+  ) => (
+    <Card sx={{ mb: 4 }}>
       <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
         <Box sx={{ 
           display: 'flex', 
@@ -335,105 +323,73 @@ function HistoryChart() {
               fontSize: { xs: '1rem', sm: '1.125rem' }
             }}
           >
-            Temperature History (Past Hour)
+            {title}
           </Typography>
-          <FormControlLabel
-            control={
-              <Switch 
-                checked={showFahrenheit} 
-                onChange={(e) => setShowFahrenheit(e.target.checked)}
-                size={isMobile ? "small" : "medium"}
-              />
-            }
-            label={
-              <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-                {isMobile ? "°F" : "Show in Fahrenheit"}
-              </Typography>
-            }
-            sx={{ m: 0 }}
-          />
-        </Box>
-        
-        <Box sx={{ mb: 3 }}>
-          <FormControl fullWidth>
-            <InputLabel sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
-              {isMobile ? "Select Sensors" : "Select Sensors to Display"}
-            </InputLabel>
-            <Select
-              multiple
-              value={selectedSensors}
-              onChange={handleSensorChange}
-              input={<OutlinedInput label={isMobile ? "Select Sensors" : "Select Sensors to Display"} />}
-              size={isMobile ? "small" : "medium"}
-              renderValue={(selected) => (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                  {selected.map((value) => {
-                    const sensor = availableSensors.find(s => s.name === value);
-                    return (
-                      <Chip 
-                        key={value} 
-                        label={isMobile ? value : `${value} (${sensor?.context || 'Unknown'})`}
-                        size="small"
-                        sx={{ 
-                          fontSize: { xs: '0.65rem', sm: '0.75rem' },
-                          height: { xs: 20, sm: 24 }
-                        }}
-                      />
-                    );
-                  })}
-                </Box>
-              )}
-            >
-              {availableSensors.map((sensor) => (
-                <MenuItem key={sensor.name} value={sensor.name}>
-                  <Box>
-                    <Typography variant="body2" sx={{ fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
-                      {sensor.name}
-                    </Typography>
-                    <Typography 
-                      variant="caption" 
-                      color="text.secondary"
-                      sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
-                    >
-                      {sensor.context} - Current: {convertTemperature(sensor.currentReading)}{getTemperatureUnit()}
-                    </Typography>
-                  </Box>
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-        
-        <Box sx={{ 
-          height: { xs: 300, sm: 350, md: 400 },
-          position: 'relative'
-        }}>
-          <Line data={chartData} options={chartOptions} />
-        </Box>
-        
-        {/* Show legend separately on mobile */}
-        {isMobile && selectedSensors.length > 0 && (
-          <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {selectedSensors.map((sensorName, index) => {
-              const colors = generateColors(selectedSensors.length);
-              return (
-                <Chip
-                  key={sensorName}
-                  label={sensorName}
-                  size="small"
-                  sx={{
-                    backgroundColor: colors[index],
-                    color: 'white',
-                    fontSize: '0.7rem',
-                    height: 20
-                  }}
+          {/* Only show temperature unit toggle on the first card */}
+          {isFirst && (
+            <FormControlLabel
+              control={
+                <Switch 
+                  checked={showFahrenheit} 
+                  onChange={(e) => setShowFahrenheit(e.target.checked)}
+                  size={isMobile ? "small" : "medium"}
                 />
-              );
-            })}
-          </Box>
+              }
+              label={
+                <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                  {isMobile ? "°F" : "Show in Fahrenheit"}
+                </Typography>
+              }
+              sx={{ m: 0 }}
+            />
+          )}
+        </Box>
+        
+        {sensors.length > 0 ? (
+          <>
+            <Box sx={{ 
+              height: { xs: 300, sm: 350, md: 400 },
+              position: 'relative'
+            }}>
+              <Line data={chartData} options={createChartOptions(title)} />
+            </Box>
+            
+            {/* Show legend separately on mobile */}
+            {isMobile && sensors.length > 0 && (
+              <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {sensors.map((sensor, index) => {
+                  const colors = generateColors(sensors.length);
+                  return (
+                    <Chip
+                      key={sensor.name}
+                      label={sensor.name}
+                      size="small"
+                      sx={{
+                        backgroundColor: colors[index],
+                        color: 'white',
+                        fontSize: '0.7rem',
+                        height: 20
+                      }}
+                    />
+                  );
+                })}
+              </Box>
+            )}
+          </>
+        ) : (
+          <Typography color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+            No sensors available for this category
+          </Typography>
         )}
       </CardContent>
     </Card>
+  );
+
+  return (
+    <Box>
+      {renderTemperatureCard("System Temperatures", systemChartData, systemSensors, true)}
+      {renderTemperatureCard("Peripherals Temperatures", peripheralChartData, peripheralSensors)}
+    </Box>
   );
 }
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Zoom } from '@mui/material';
+import { Box, useTheme } from '@mui/material';
 
 interface SplashScreenProps {
   onSplashComplete: () => void;
@@ -7,6 +7,7 @@ interface SplashScreenProps {
 
 const SplashScreen: React.FC<SplashScreenProps> = ({ onSplashComplete }) => {
   const [show, setShow] = useState(true);
+  const theme = useTheme();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -28,7 +29,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onSplashComplete }) => {
         left: 0,
         width: '100vw',
         height: '100vh',
-        backgroundColor: '#1f2532',
+        backgroundColor: theme.palette.background.default,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -45,16 +46,24 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onSplashComplete }) => {
           maxWidth: '80vw',
         }}
       >
-        {/* HPE Logo SVG */}
+        {/* Logo SVG - Green rectangular frame (border only) */}
         <svg
           width="100%"
           height="auto"
-          viewBox="0 0 400 50"
+          viewBox="0 0 400 100"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
-          {/* HPE Green Rectangle */}
-          <rect x="50" y="15" width="300" height="20" fill="#01A982" rx="2" />
+          {/* Green rectangular frame - stroke only */}
+          <rect 
+            x="5" 
+            y="5" 
+            width="390" 
+            height="90" 
+            fill="none"
+            stroke="#01A982" 
+            strokeWidth="45"
+          />
         </svg>
       </Box>
     </Box>
