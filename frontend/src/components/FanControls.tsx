@@ -30,7 +30,8 @@ import {
   FormControlLabel,
   Paper,
   Alert,
-  Snackbar
+  Snackbar,
+  useTheme
 } from "@mui/material";
 
 function FanControls() {
@@ -45,6 +46,7 @@ function FanControls() {
     message: string;
     severity: 'success' | 'error' | 'info' | 'warning';
   }>({ open: false, message: '', severity: 'info' });
+  const theme = useTheme();
 
   const addDebugLog = (message: string) => {
     const timestamp = new Date().toLocaleTimeString();
@@ -347,26 +349,37 @@ function FanControls() {
     </Card>
 
     {/* Debug Terminal Card */}
-    <Card sx={{ mb: 4, bgcolor: '#1e1e1e', color: '#00ff00' }}>
+    <Card sx={{ 
+      mb: 4, 
+      bgcolor: theme.palette.mode === 'dark' ? '#1a1a1a' : '#f5f5f5',
+      border: `1px solid ${theme.palette.divider}`
+    }}>
       <CardContent>
-        <Typography variant="h6" sx={{ mb: 2, color: '#00ff00', fontFamily: 'monospace' }}>
+        <Typography variant="h6" sx={{ 
+          mb: 2, 
+          color: theme.palette.mode === 'dark' ? '#00ff00' : '#2e7d32',
+          fontFamily: 'monospace' 
+        }}>
           Debug Terminal
         </Typography>
         
         <Paper 
           sx={{ 
-            bgcolor: '#000000', 
+            bgcolor: theme.palette.mode === 'dark' ? '#0a0a0a' : '#fafafa',
             p: 2, 
             height: 300, 
             overflow: 'auto',
             fontFamily: 'monospace',
             fontSize: '0.875rem',
-            color: '#00ff00',
-            border: '1px solid #333'
+            color: theme.palette.mode === 'dark' ? '#00ff00' : '#2e7d32',
+            border: `1px solid ${theme.palette.divider}`
           }}
         >
           {debugLogs.length === 0 ? (
-            <Typography sx={{ color: '#666', fontFamily: 'monospace' }}>
+            <Typography sx={{ 
+              color: theme.palette.text.secondary, 
+              fontFamily: 'monospace' 
+            }}>
               Waiting for fan control operations...
             </Typography>
           ) : (
@@ -376,9 +389,10 @@ function FanControls() {
                 sx={{ 
                   fontFamily: 'monospace', 
                   fontSize: '0.875rem',
-                  color: log.includes('✗') ? '#ff4444' : 
-                         log.includes('✓') ? '#44ff44' : 
-                         log.includes('SSH Command:') ? '#ffff44' : '#00ff00',
+                  color: log.includes('✗') ? theme.palette.error.main : 
+                         log.includes('✓') ? theme.palette.success.main : 
+                         log.includes('SSH Command:') ? theme.palette.warning.main : 
+                         theme.palette.mode === 'dark' ? '#00ff00' : '#2e7d32',
                   mb: 0.5
                 }}
               >

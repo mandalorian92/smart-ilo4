@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { getHistory } from "../api";
-import { Card, CardContent, Typography, CircularProgress } from "@mui/material";
+import { Card, CardContent, Typography, CircularProgress, useTheme } from "@mui/material";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -18,6 +18,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 function HistoryChart() {
   const [data, setData] = useState<{ time: string; avgTemp: number }[]>([]);
   const [loading, setLoading] = useState(true);
+  const theme = useTheme();
 
   useEffect(() => {
     async function fetchHistory() {
@@ -47,19 +48,49 @@ function HistoryChart() {
         label: "Avg Temp (°C)",
         data: data.map((d) => d.avgTemp),
         fill: false,
-        borderColor: "#1976d2",
+        borderColor: theme.palette.primary.main,
+        backgroundColor: theme.palette.primary.light,
         tension: 0.1
       }
     ]
   };
 
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        labels: {
+          color: theme.palette.text.primary,
+        }
+      }
+    },
+    scales: {
+      x: {
+        ticks: {
+          color: theme.palette.text.secondary,
+        },
+        grid: {
+          color: theme.palette.divider,
+        }
+      },
+      y: {
+        ticks: {
+          color: theme.palette.text.secondary,
+        },
+        grid: {
+          color: theme.palette.divider,
+        }
+      }
+    }
+  };
+
   return (
     <Card sx={{ mb: 4 }}>
       <CardContent>
-        <Typography variant="h5" gutterBottom>
+        <Typography variant="h6" gutterBottom>
           Past Hour Temperature
         </Typography>
-        <Line data={chartData} />
+        <Line data={chartData} options={chartOptions} />
       </CardContent>
     </Card>
   );

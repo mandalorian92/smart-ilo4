@@ -15,7 +15,8 @@ import {
   Box,
   Chip,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  useTheme
 } from "@mui/material";
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningIcon from '@mui/icons-material/Warning';
@@ -26,6 +27,7 @@ function Dashboard() {
   const [fans, setFans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFahrenheit, setShowFahrenheit] = useState(false);
+  const theme = useTheme();
 
   useEffect(() => {
     async function fetchData() {
@@ -54,24 +56,24 @@ function Dashboard() {
     
     // If we have thresholds, use them
     if (critical && reading >= critical) {
-      return <ErrorIcon sx={{ color: '#f44336', fontSize: 20 }} />; // Red X for critical
+      return <ErrorIcon sx={{ color: theme.palette.error.main, fontSize: 20 }} />; // Red X for critical
     }
     
     if (critical && reading >= (critical - 15)) {
-      return <WarningIcon sx={{ color: '#ff9800', fontSize: 20 }} />; // Yellow warning for 15°C below caution
+      return <WarningIcon sx={{ color: theme.palette.warning.main, fontSize: 20 }} />; // Yellow warning for 15°C below caution
     }
     
     // Green check for OK status
-    return <CheckCircleIcon sx={{ color: '#4caf50', fontSize: 20 }} />;
+    return <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />;
   };
 
   const getFanStatusIcon = (fan: any) => {
     if (fan.health === 'OK' && fan.status === 'Enabled') {
-      return <CheckCircleIcon sx={{ color: '#4caf50', fontSize: 20 }} />;
+      return <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />;
     } else if (fan.status === 'Absent') {
-      return <ErrorIcon sx={{ color: '#9e9e9e', fontSize: 20 }} />;
+      return <ErrorIcon sx={{ color: theme.palette.text.disabled, fontSize: 20 }} />;
     } else {
-      return <WarningIcon sx={{ color: '#ff9800', fontSize: 20 }} />;
+      return <WarningIcon sx={{ color: theme.palette.warning.main, fontSize: 20 }} />;
     }
   };
 
@@ -115,7 +117,7 @@ function Dashboard() {
           <TableContainer component={Paper} variant="outlined">
             <Table size="small">
               <TableHead>
-                <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                <TableRow sx={{ backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : theme.palette.grey[100] }}>
                   <TableCell><strong>Fan</strong></TableCell>
                   <TableCell><strong>Location</strong></TableCell>
                   <TableCell align="center"><strong>Status</strong></TableCell>
@@ -124,7 +126,14 @@ function Dashboard() {
               </TableHead>
               <TableBody>
                 {filteredFans.map((fan, index) => (
-                  <TableRow key={fan.name} sx={{ '&:nth-of-type(even)': { backgroundColor: '#fafafa' } }}>
+                  <TableRow key={fan.name} sx={{ 
+                    '&:nth-of-type(even)': { 
+                      backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[900] : theme.palette.grey[50] 
+                    },
+                    '&:hover': {
+                      backgroundColor: theme.palette.action.hover,
+                    }
+                  }}>
                     <TableCell>{fan.name}</TableCell>
                     <TableCell>System</TableCell>
                     <TableCell align="center">
@@ -167,11 +176,9 @@ function Dashboard() {
           <TableContainer component={Paper} variant="outlined">
             <Table size="small">
               <TableHead>
-                <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                <TableRow sx={{ backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : theme.palette.grey[100] }}>
                   <TableCell><strong>Sensor</strong></TableCell>
                   <TableCell><strong>Location</strong></TableCell>
-                  <TableCell align="center"><strong>X</strong></TableCell>
-                  <TableCell align="center"><strong>Y</strong></TableCell>
                   <TableCell align="center"><strong>Status</strong></TableCell>
                   <TableCell align="right"><strong>Reading</strong></TableCell>
                   <TableCell><strong>Thresholds</strong></TableCell>
@@ -179,7 +186,14 @@ function Dashboard() {
               </TableHead>
               <TableBody>
                 {filteredSensors.map((sensor, index) => (
-                  <TableRow key={sensor.name} sx={{ '&:nth-of-type(even)': { backgroundColor: '#fafafa' } }}>
+                  <TableRow key={sensor.name} sx={{ 
+                    '&:nth-of-type(even)': { 
+                      backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[900] : theme.palette.grey[50] 
+                    },
+                    '&:hover': {
+                      backgroundColor: theme.palette.action.hover,
+                    }
+                  }}>
                     <TableCell>{sensor.name}</TableCell>
                     <TableCell>
                       {sensor.context === 'CPU' ? 'CPU' : 
@@ -188,8 +202,6 @@ function Dashboard() {
                        sensor.context === 'PowerSupply' ? 'Power Supply' :
                        sensor.context || 'System'}
                     </TableCell>
-                    <TableCell align="center">-</TableCell>
-                    <TableCell align="center">-</TableCell>
                     <TableCell align="center">
                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
                         {getStatusIcon(sensor)}
