@@ -193,8 +193,9 @@ export async function unlockFanControl(): Promise<void> {
 
 export async function lockFanAtSpeed(fanId: number, speedPercent: number): Promise<void> {
   try {
-    // Convert percentage to PWM value (0-100% to 0-255)
-    const pwmValue = Math.round((speedPercent / 100) * 255);
+    // Convert percentage (10-100%) to PWM value (25-255)
+    // Formula: PWM = ((speedPercent / 100) * 255) but with minimum of 25
+    const pwmValue = Math.max(25, Math.round((speedPercent / 100) * 255));
     await runIloCommand(`fan p ${fanId} lock ${pwmValue}`);
   } catch (error) {
     throw new Error(`Failed to lock fan ${fanId} at ${speedPercent}%: ${(error as Error).message}`);

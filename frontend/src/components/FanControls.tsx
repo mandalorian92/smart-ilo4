@@ -36,13 +36,19 @@ function FanControls() {
   const [fans, setFans] = useState<any[]>([]);
   const [fanSpeeds, setFanSpeeds] = useState<Record<string, number>>({});
   const [editAllMode, setEditAllMode] = useState(false);
-  const [globalSpeed, setGlobalSpeed] = useState(21);
+  const [globalSpeed, setGlobalSpeed] = useState(25);
   const [loading, setLoading] = useState(true);
+  const [debugLogs, setDebugLogs] = useState<string[]>([]);
   const [notification, setNotification] = useState<{
     open: boolean;
     message: string;
     severity: 'success' | 'error' | 'info' | 'warning';
   }>({ open: false, message: '', severity: 'info' });
+
+  const addDebugLog = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setDebugLogs(prev => [...prev, `[${timestamp}] ${message}`].slice(-20)); // Keep last 20 logs
+  };
 
   const showNotification = (message: string, severity: 'success' | 'error' | 'info' | 'warning' = 'info') => {
     setNotification({ open: true, message, severity });
@@ -57,21 +63,33 @@ function FanControls() {
   }, []);
 
   const handleFanSpeedChange = (fanName: string, speed: number) => {
-    setFanSpeeds(prev => ({ ...prev, [fanName]: speed }));
+    if (editAllMode) {
+      // When edit all is enabled, update global speed and all fans
+      setGlobalSpeed(speed);
+      const newSpeeds: Record<string, number> = {};
+      fans.forEach(fan => newSpeeds[fan.name] = speed);
+      setFanSpeeds(newSpeeds);
+    } else {
+      // When edit all is disabled, only update the specific fan
+      setFanSpeeds(prev => ({ ...prev, [fanName]: speed }));
+    }
   };
 
   const handleGlobalSpeedChange = (speed: number) => {
     setGlobalSpeed(speed);
-    const newSpeeds: Record<string, number> = {};
-    fans.forEach(fan => newSpeeds[fan.name] = speed);
-    setFanSpeeds(newSpeeds);
+    if (editAllMode) {
+      // When edit all is enabled, update all fan speeds to match global speed
+      const newSpeeds: Record<string, number> = {};
+      fans.forEach(fan => newSpeeds[fan.name] = speed);
+      setFanSpeeds(newSpeeds);
+    }
   };
 
   const handlePresetSpeed = (preset: 'quiet' | 'normal' | 'turbo') => {
     const speedMap = {
-      quiet: 15,
-      normal: 50,
-      turbo: 100
+      quiet: 25,  // 25% minimum
+      normal: 60, // 60% normal
+      turbo: 100  // 100% maximum
     };
     handleGlobalSpeedChange(speedMap[preset]);
   };
@@ -79,27 +97,37 @@ function FanControls() {
   const handleUpdate = async () => {
     try {
       setLoading(true);
+      addDebugLog('Starting fan speed update...');
       
       if (editAllMode) {
         // If in edit all mode, set all fans to the global speed
+        addDebugLog(`Setting all fans to ${globalSpeed}% (PWM: ${Math.round((globalSpeed / 100) * 255)})`);
         await setAllFanSpeeds(globalSpeed);
+        addDebugLog('✓ All fans updated successfully');
         showNotification(`All fans set to ${globalSpeed}%`, 'success');
       } else {
         // Set individual fan speeds
+        addDebugLog('Setting individual fan speeds:');
         for (const [fanName, speed] of Object.entries(fanSpeeds)) {
           const fanIndex = fans.findIndex(f => f.name === fanName);
           if (fanIndex >= 0) {
+            const pwmValue = Math.round((speed / 100) * 255);
+            addDebugLog(`- Fan ${fanIndex} (${fanName}): ${speed}% (PWM: ${pwmValue})`);
             await lockFanAtSpeed(fanIndex, speed);
           }
         }
+        addDebugLog('✓ Individual fan speeds updated successfully');
         showNotification('Fan speeds updated successfully', 'success');
       }
       
       // Refresh fan data
+      addDebugLog('Refreshing fan data...');
       await fetchFans();
     } catch (error) {
+      const errorMsg = (error as any).response?.data?.error || (error as Error).message;
+      addDebugLog(`✗ Error: ${errorMsg}`);
       console.error('Failed to update fan speeds:', error);
-      showNotification(`Failed to update fan speeds: ${(error as any).response?.data?.error || (error as Error).message}`, 'error');
+      showNotification(`Failed to update fan speeds: ${errorMsg}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -108,18 +136,22 @@ function FanControls() {
   const handleReset = async () => {
     try {
       setLoading(true);
+      addDebugLog('Resetting fan overrides...');
       await resetFans();
       
       // Reset to original speeds
       const originalSpeeds: Record<string, number> = {};
-      fans.forEach(fan => originalSpeeds[fan.name] = fan.speed);
+      fans.forEach(fan => originalSpeeds[fan.name] = Math.max(10, fan.speed));
       setFanSpeeds(originalSpeeds);
       
+      addDebugLog('✓ Fan overrides reset successfully');
       showNotification('Fan overrides reset successfully', 'success');
       await fetchFans();
     } catch (error) {
+      const errorMsg = (error as any).response?.data?.error || (error as Error).message;
+      addDebugLog(`✗ Reset error: ${errorMsg}`);
       console.error('Failed to reset fans:', error);
-      showNotification(`Failed to reset fans: ${(error as any).response?.data?.error || (error as Error).message}`, 'error');
+      showNotification(`Failed to reset fans: ${errorMsg}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -128,11 +160,16 @@ function FanControls() {
   const handleUnlock = async () => {
     try {
       setLoading(true);
+      addDebugLog('Unlocking fan control via SSH...');
+      addDebugLog('SSH Command: fan p global unlock');
       await unlockFanControl();
+      addDebugLog('✓ Fan control unlocked successfully');
       showNotification('Fan control unlocked successfully', 'success');
     } catch (error) {
+      const errorMsg = (error as any).response?.data?.error || (error as Error).message;
+      addDebugLog(`✗ Unlock error: ${errorMsg}`);
       console.error('Failed to unlock fan control:', error);
-      showNotification(`Failed to unlock fan control: ${(error as any).response?.data?.error || (error as Error).message}`, 'error');
+      showNotification(`Failed to unlock fan control: ${errorMsg}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -143,9 +180,10 @@ function FanControls() {
       const data = await getFans();
       setFans(data);
       const speeds: Record<string, number> = {};
-      data.forEach((fan: any) => speeds[fan.name] = fan.speed);
+      data.forEach((fan: any) => speeds[fan.name] = Math.max(10, fan.speed)); // Ensure minimum 10%
       setFanSpeeds(speeds);
     } catch (error) {
+      addDebugLog(`✗ Failed to fetch fans: ${(error as Error).message}`);
       console.error('Failed to fetch fans:', error);
     }
   };
@@ -153,6 +191,7 @@ function FanControls() {
   if (loading) return <CircularProgress />;
 
   return (
+    <>
     <Card sx={{ mb: 4, bgcolor: '#2c3e50', color: 'white' }}>
       <CardContent>
         <Typography variant="h5" gutterBottom sx={{ color: '#2ecc71', display: 'flex', alignItems: 'center' }}>
@@ -211,9 +250,9 @@ function FanControls() {
                   {fan.name}
                 </Typography>
                 <Slider
-                  value={fanSpeeds[fan.name] || fan.speed}
+                  value={Math.max(10, fanSpeeds[fan.name] || fan.speed)}
                   onChange={(_, value) => handleFanSpeedChange(fan.name, value as number)}
-                  min={0}
+                  min={10}
                   max={100}
                   sx={{ 
                     mx: 2, 
@@ -223,13 +262,13 @@ function FanControls() {
                     '& .MuiSlider-track': { color: '#3498db' },
                     '& .MuiSlider-rail': { color: '#555' }
                   }}
-                  disabled={!editAllMode}
+                  disabled={false} // Always enabled - logic handled in handleFanSpeedChange
                 />
                 <TextField
-                  value={fanSpeeds[fan.name] || fan.speed}
-                  onChange={(e) => handleFanSpeedChange(fan.name, parseInt(e.target.value) || 0)}
+                  value={Math.max(10, fanSpeeds[fan.name] || fan.speed)}
+                  onChange={(e) => handleFanSpeedChange(fan.name, Math.max(10, parseInt(e.target.value) || 10))}
                   type="number"
-                  inputProps={{ min: 0, max: 100 }}
+                  inputProps={{ min: 10, max: 100 }}
                   size="small"
                   sx={{ 
                     width: 60,
@@ -241,7 +280,7 @@ function FanControls() {
                     },
                     '& .MuiInputBase-input': { color: 'white' }
                   }}
-                  disabled={!editAllMode}
+                  disabled={false} // Always enabled - logic handled in handleFanSpeedChange
                 />
                 <Typography sx={{ ml: 1, color: 'white' }}>%</Typography>
               </Box>
@@ -277,53 +316,6 @@ function FanControls() {
           </Button>
         </Box>
 
-        <Divider sx={{ my: 3, borderColor: '#555' }} />
-
-        {/* Advanced Controls */}
-        <Typography variant="h6" sx={{ mb: 2, color: '#f39c12' }}>
-          Advanced Controls
-        </Typography>
-        
-        <Typography variant="body2" sx={{ mb: 2, color: '#bdc3c7' }}>
-          These controls interact directly with iLO4 via SSH. Use with caution.
-        </Typography>
-
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-          <Button
-            variant="outlined"
-            onClick={() => showNotification('Feature coming soon: PID low limit adjustment', 'info')}
-            sx={{ 
-              borderColor: '#f39c12', 
-              color: '#f39c12',
-              '&:hover': { borderColor: '#e67e22', backgroundColor: 'rgba(243, 156, 18, 0.1)' }
-            }}
-          >
-            Adjust PID Low Limits
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={() => showNotification('Feature coming soon: Fan info display', 'info')}
-            sx={{ 
-              borderColor: '#9b59b6', 
-              color: '#9b59b6',
-              '&:hover': { borderColor: '#8e44ad', backgroundColor: 'rgba(155, 89, 182, 0.1)' }
-            }}
-          >
-            Show Fan Info
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={() => showNotification('Feature coming soon: Group analysis', 'info')}
-            sx={{ 
-              borderColor: '#e74c3c', 
-              color: '#e74c3c',
-              '&:hover': { borderColor: '#c0392b', backgroundColor: 'rgba(231, 76, 60, 0.1)' }
-            }}
-          >
-            Analyze Groups
-          </Button>
-        </Box>
-
         {/* Notification Snackbar */}
         <Snackbar
           open={notification.open}
@@ -337,6 +329,51 @@ function FanControls() {
         </Snackbar>
       </CardContent>
     </Card>
+
+    {/* Debug Terminal Card */}
+    <Card sx={{ mb: 4, bgcolor: '#1e1e1e', color: '#00ff00' }}>
+      <CardContent>
+        <Typography variant="h6" sx={{ mb: 2, color: '#00ff00', fontFamily: 'monospace' }}>
+          Debug Terminal
+        </Typography>
+        
+        <Paper 
+          sx={{ 
+            bgcolor: '#000000', 
+            p: 2, 
+            height: 300, 
+            overflow: 'auto',
+            fontFamily: 'monospace',
+            fontSize: '0.875rem',
+            color: '#00ff00',
+            border: '1px solid #333'
+          }}
+        >
+          {debugLogs.length === 0 ? (
+            <Typography sx={{ color: '#666', fontFamily: 'monospace' }}>
+              Waiting for fan control operations...
+            </Typography>
+          ) : (
+            debugLogs.map((log, index) => (
+              <Typography 
+                key={index} 
+                sx={{ 
+                  fontFamily: 'monospace', 
+                  fontSize: '0.875rem',
+                  color: log.includes('✗') ? '#ff4444' : 
+                         log.includes('✓') ? '#44ff44' : 
+                         log.includes('SSH Command:') ? '#ffff44' : '#00ff00',
+                  mb: 0.5
+                }}
+              >
+                {log}
+              </Typography>
+            ))
+          )}
+        </Paper>
+      </CardContent>
+    </Card>
+    </>
   );
 }
 
