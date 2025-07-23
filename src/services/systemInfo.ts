@@ -60,21 +60,26 @@ class SystemInfoCache {
         runIloCommand("show system1/firmware1")
       ]);
 
-      // Parse the outputs
+      // Debug logging to see actual outputs
+      console.log("System1 output:", system1Output);
+      console.log("Firmware1 output:", firmware1Output);
+      console.log("SystemFirmware1 output:", systemFirmware1Output);
+
+      // Parse the outputs using improved parsing
       const model = this.parseValue(system1Output, "name=") || "Unknown";
       const serialNumber = this.parseValue(system1Output, "number=") || "Unknown";
       const iloGeneration = this.parseValue(firmware1Output, "name=") || "Unknown";
       
-      // Parse System ROM (version + date)
+      // Parse System ROM (version + date) from system1/firmware1
       const systemRomVersion = this.parseValue(systemFirmware1Output, "version=") || "";
-      const systemRomDate = this.parseValue(systemFirmware1Output, "date=") || "";
+      const systemRomDate = this.parseDate(systemFirmware1Output, "date=") || "";
       const systemRom = systemRomVersion && systemRomDate 
         ? `${systemRomVersion} (${systemRomDate})`
         : systemRomVersion || systemRomDate || "Unknown";
 
-      // Parse iLO Firmware (version + date)
+      // Parse iLO Firmware (version + date) from /map1/firmware1
       const iloFirmwareVersion = this.parseValue(firmware1Output, "version=") || "";
-      const iloFirmwareDate = this.parseValue(firmware1Output, "date=") || "";
+      const iloFirmwareDate = this.parseDate(firmware1Output, "date=") || "";
       const iloFirmware = iloFirmwareVersion && iloFirmwareDate 
         ? `${iloFirmwareVersion} (${iloFirmwareDate})`
         : iloFirmwareVersion || iloFirmwareDate || "Unknown";
@@ -107,11 +112,25 @@ class SystemInfoCache {
     const lines = output.split('\n');
     for (const line of lines) {
       const trimmedLine = line.trim();
-      if (trimmedLine.includes(key)) {
-        const match = trimmedLine.match(new RegExp(`${key}(.+?)(?:\\s|$)`));
-        if (match && match[1]) {
-          return match[1].trim().replace(/['"]/g, ''); // Remove quotes if present
-        }
+      if (trimmedLine.startsWith(key)) {
+        // Extract everything after the key, handling multi-word values
+        const value = trimmedLine.substring(key.length).trim();
+        // Remove quotes if present and return the full value
+        return value.replace(/^["']|["']$/g, '');
+      }
+    }
+    return null;
+  }
+
+  private parseDate(output: string, key: string): string | null {
+    const lines = output.split('\n');
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      if (trimmedLine.startsWith(key)) {
+        // Extract everything after the key for date parsing
+        const value = trimmedLine.substring(key.length).trim();
+        // Remove quotes if present and return the full date value
+        return value.replace(/^["']|["']$/g, '');
       }
     }
     return null;
