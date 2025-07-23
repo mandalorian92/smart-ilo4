@@ -9,7 +9,8 @@ import {
   setPidLowLimit,
   getFanInfo,
   getFanPidInfo,
-  getFanGroupInfo
+  getFanGroupInfo,
+  invalidateThermalCache
 } from "../services/ilo.js";
 
 const router = Router();
@@ -125,6 +126,16 @@ router.get("/group-info", async (_req, res) => {
   try {
     const info = await getFanGroupInfo();
     res.json({ success: true, data: info });
+  } catch (err) {
+    res.status(500).json({ success: false, error: (err as Error).message });
+  }
+});
+
+// POST /fans/invalidate-cache — force refresh of thermal data cache
+router.post("/invalidate-cache", async (_req, res) => {
+  try {
+    invalidateThermalCache();
+    res.json({ success: true, message: "Thermal data cache invalidated" });
   } catch (err) {
     res.status(500).json({ success: false, error: (err as Error).message });
   }

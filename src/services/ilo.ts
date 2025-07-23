@@ -28,6 +28,12 @@ let lastThermalData: any = null;
 let lastFetchTime = 0;
 const CACHE_DURATION = 30000; // 30 seconds
 
+// Function to invalidate cache (force refresh on next request)
+export function invalidateThermalCache() {
+  lastFetchTime = 0;
+  lastThermalData = null;
+}
+
 async function getCachedThermalData() {
   const now = Date.now();
   if (!lastThermalData || (now - lastFetchTime) > CACHE_DURATION) {
@@ -172,6 +178,9 @@ export async function setFanSpeed(speed: number) {
     for (let i = 0; i < fans.length; i++) {
       await lockFanAtSpeed(i, speed);
     }
+    
+    // Invalidate cache to force fresh data on next request
+    invalidateThermalCache();
   } catch (error) {
     console.error(`Failed to set all fans to ${speed}%:`, error);
     // Fallback to override system
@@ -197,6 +206,9 @@ export async function lockFanAtSpeed(fanId: number, speedPercent: number): Promi
     // Formula: PWM = ((speedPercent / 100) * 255) but with minimum of 25
     const pwmValue = Math.max(25, Math.round((speedPercent / 100) * 255));
     await runIloCommand(`fan p ${fanId} lock ${pwmValue}`);
+    
+    // Invalidate cache to force fresh data on next request
+    invalidateThermalCache();
   } catch (error) {
     throw new Error(`Failed to lock fan ${fanId} at ${speedPercent}%: ${(error as Error).message}`);
   }

@@ -72,3 +72,8 @@ export async function getFanGroupInfo() {
   const res = await axios.get(`${API_BASE}/fans/group-info`);
   return res.data;
 }
+
+export async function invalidateFanCache() {
+  const res = await axios.post(`${API_BASE}/fans/invalidate-cache`);
+  return res.data;
+}

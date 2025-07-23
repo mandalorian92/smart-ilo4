@@ -7,7 +7,8 @@ import {
   setAllFanSpeeds,
   unlockFanControl,
   lockFanAtSpeed,
-  resetFans
+  resetFans,
+  invalidateFanCache
 } from "../api";
 import { 
   Card, 
@@ -120,9 +121,16 @@ function FanControls() {
         showNotification('Fan speeds updated successfully', 'success');
       }
       
-      // Refresh fan data
+      // Wait a moment for iLO to process the changes, then refresh fan data
+      addDebugLog('Waiting for iLO to process changes...');
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+      
+      addDebugLog('Invalidating backend cache...');
+      await invalidateFanCache();
+      
       addDebugLog('Refreshing fan data...');
-      await fetchFans();
+      await fetchFans(true); // Bust cache to get fresh data
+      addDebugLog('✓ Fan data refreshed');
     } catch (error) {
       const errorMsg = (error as any).response?.data?.error || (error as Error).message;
       addDebugLog(`✗ Error: ${errorMsg}`);
@@ -175,20 +183,27 @@ function FanControls() {
     }
   };
 
-  const fetchFans = async () => {
+  const fetchFans = async (bustCache = false) => {
     try {
+      // Add cache busting parameter when needed
+      const url = bustCache ? `/fans?_t=${Date.now()}` : '/fans';
       const data = await getFans();
       setFans(data);
       const speeds: Record<string, number> = {};
       data.forEach((fan: any) => speeds[fan.name] = Math.max(10, fan.speed)); // Ensure minimum 10%
       setFanSpeeds(speeds);
+      
+      // Also update global speed to match if all fans are at the same speed
+      const speedValues = Object.values(speeds);
+      const uniqueSpeeds = Array.from(new Set(speedValues));
+      if (uniqueSpeeds.length === 1) {
+        setGlobalSpeed(uniqueSpeeds[0]);
+      }
     } catch (error) {
       addDebugLog(`✗ Failed to fetch fans: ${(error as Error).message}`);
       console.error('Failed to fetch fans:', error);
     }
   };
-
-  if (loading) return <CircularProgress />;
 
   return (
     <>
@@ -197,6 +212,7 @@ function FanControls() {
         <Typography variant="h5" gutterBottom sx={{ color: '#2ecc71', display: 'flex', alignItems: 'center' }}>
           <Box sx={{ width: 20, height: 20, bgcolor: '#2ecc71', mr: 2, borderRadius: 1 }} />
           iLO Fan Controller
+          {loading && <CircularProgress size={20} sx={{ ml: 2, color: '#2ecc71' }} />}
         </Typography>
         
         {/* Edit All Toggle */}
