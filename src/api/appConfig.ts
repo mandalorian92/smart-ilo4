@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAppConfig, saveAppConfig } from '../services/appConfig';
+import { getAppConfig, saveAppConfig } from '../services/appConfig.js';
 
 const router = Router();
 
