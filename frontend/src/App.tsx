@@ -36,6 +36,7 @@ import HPELogo from "./components/HPELogo";
 import LoginPage from "./components/LoginPage";
 import FirstTimeSetup from "./components/FirstTimeSetup";
 import SettingsDialog from "./components/SettingsDialog";
+import AccountsDialog from "./components/AccountsDialog";
 import SessionTimeoutWarning from "./components/SessionTimeoutWarning";
 
 interface TabPanelProps {
@@ -150,6 +151,7 @@ function AppContent() {
   const [tabValue, setTabValue] = useState(0);
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [accountsOpen, setAccountsOpen] = useState(false);
   
   const { user } = useAuth();
 
@@ -197,6 +199,12 @@ function AppContent() {
       <SettingsDialog 
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
+      />
+
+      {/* Accounts Dialog */}
+      <AccountsDialog 
+        open={accountsOpen}
+        onClose={() => setAccountsOpen(false)}
       />
 
       {/* Design System Compliant Header */}
@@ -249,7 +257,10 @@ function AppContent() {
           {/* Right Section - Actions */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
             {/* Actions Menu */}
-            <ActionsMenu onSettingsClick={() => setSettingsOpen(true)} />
+            <ActionsMenu 
+              onSettingsClick={() => setSettingsOpen(true)} 
+              onAccountsClick={() => setAccountsOpen(true)}
+            />
           </Box>
         </Toolbar>
 
@@ -332,14 +343,11 @@ function AppContent() {
             px: { xs: 1, sm: 2, md: 3 },
           }}
         >
-          {/* Design System Compliant Navigation Tabs */}
+          {/* HPE Design System Style Navigation Tabs */}
           <Box sx={{ 
             borderBottom: 1, 
             borderColor: 'divider', 
-            mb: { xs: 2, sm: 3 },
-            bgcolor: 'background.paper',
-            borderRadius: '8px 8px 0 0',
-            overflow: 'hidden'
+            mb: { xs: 2, sm: 3 }
           }}>
             <Tabs 
               value={tabValue} 
@@ -349,38 +357,25 @@ function AppContent() {
               scrollButtons={isMobile ? "auto" : false}
               allowScrollButtonsMobile
               sx={{
-                minHeight: { xs: 48, sm: 56 },
-                '& .MuiTabs-root': {
-                  bgcolor: 'background.paper'
-                },
                 '& .MuiTabs-indicator': {
-                  height: 3,
-                  borderRadius: '3px 3px 0 0',
+                  height: 2,
                   bgcolor: 'primary.main'
                 },
                 '& .MuiTab-root': {
                   textTransform: 'none',
                   fontWeight: 500,
-                  fontSize: { xs: '0.875rem', sm: '1rem' },
-                  minWidth: { xs: 'auto', sm: 120 },
-                  minHeight: { xs: 48, sm: 56 },
-                  px: { xs: 1.5, sm: 2, md: 3 },
-                  py: { xs: 1, sm: 1.5 },
-                  gap: { xs: 0.5, sm: 1 },
+                  fontSize: '0.875rem',
+                  minWidth: 'auto',
+                  minHeight: 48,
+                  px: 2,
+                  py: 1.5,
                   color: 'text.secondary',
-                  transition: 'all 0.2s ease-in-out',
                   '&:hover': {
-                    color: 'primary.main',
-                    bgcolor: `${theme.palette.primary.main}08`
+                    color: 'text.primary'
                   },
                   '&.Mui-selected': {
                     color: 'primary.main',
-                    fontWeight: 600,
-                    bgcolor: `${theme.palette.primary.main}12`
-                  },
-                  '&.Mui-focusVisible': {
-                    outline: `2px solid ${theme.palette.primary.main}`,
-                    outlineOffset: -2
+                    fontWeight: 600
                   }
                 }
               }}
@@ -388,14 +383,6 @@ function AppContent() {
               {tabs.map((tab, index) => (
                 <Tab 
                   key={tab.label}
-                  icon={
-                    tab.badge ? (
-                      <Badge badgeContent={tab.badge} color="error" variant="dot">
-                        {tab.icon}
-                      </Badge>
-                    ) : tab.icon
-                  }
-                  iconPosition="start"
                   label={tab.label}
                   {...a11yProps(index)}
                   aria-describedby={`tab-desc-${index}`}

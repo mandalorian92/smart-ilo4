@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { getSensors, getFans } from "../api";
 import { 
   Card, 
@@ -15,18 +15,19 @@ import {
   Chip,
   Paper,
   IconButton,
-  Tooltip
+  Tooltip,
+  TextField,
+  InputAdornment
 } from "@mui/material";
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningIcon from '@mui/icons-material/Warning';
 import ErrorIcon from '@mui/icons-material/Error';
 import ThermostatIcon from '@mui/icons-material/Thermostat';
 import AirIcon from '@mui/icons-material/Air';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import TrendingDownIcon from '@mui/icons-material/TrendingDown';
-import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import HPEDataTable, { StatusIndicator, ProgressBar, TrendIndicator } from './HPEDataTable';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
+import HPEDataTable, { StatusIndicator, ProgressBar } from './HPEDataTable';
 
 // Circular progress component for gauges
 function CircularGauge({ 
@@ -155,10 +156,6 @@ function TemperatureCard({
     gaugeColor = theme.palette.warning.main;
   }
   
-  // Simulate trend (in real implementation, this would come from historical data)
-  const trend = Math.random() > 0.5 ? 'up' : Math.random() > 0.5 ? 'down' : 'flat';
-  const TrendIcon = trend === 'up' ? TrendingUpIcon : trend === 'down' ? TrendingDownIcon : TrendingFlatIcon;
-  
   return (
     <Card 
       elevation={0}
@@ -219,14 +216,6 @@ function TemperatureCard({
             flexShrink: 0
           }}>
             <StatusIndicator status={status} size="medium" />
-            <TrendIcon 
-              sx={{ 
-                fontSize: 20, 
-                color: trend === 'up' ? theme.palette.error.main : 
-                       trend === 'down' ? theme.palette.success.main : 
-                       theme.palette.text.secondary 
-              }} 
-            />
           </Box>
         </Box>
         
@@ -308,9 +297,6 @@ function FanCard({ fan }: { fan: any }) {
     gaugeColor = theme.palette.warning.main;
   }
   
-  // Simulate trend and RPM (in real implementation, this would come from historical data)
-  const trend = Math.random() > 0.5 ? 'up' : Math.random() > 0.5 ? 'down' : 'flat';
-  const TrendIcon = trend === 'up' ? TrendingUpIcon : trend === 'down' ? TrendingDownIcon : TrendingFlatIcon;
   const rpm = Math.round((fan.speed / 100) * 6000); // Estimated RPM
   
   return (
@@ -369,14 +355,6 @@ function FanCard({ fan }: { fan: any }) {
             flexShrink: 0
           }}>
             <StatusIndicator status={status} size="medium" />
-            <TrendIcon 
-              sx={{ 
-                fontSize: 20, 
-                color: trend === 'up' ? theme.palette.warning.main : 
-                       trend === 'down' ? theme.palette.success.main : 
-                       theme.palette.text.secondary 
-              }} 
-            />
           </Box>
         </Box>
         
@@ -442,6 +420,7 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [showFahrenheit, setShowFahrenheit] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [searchQuery, setSearchQuery] = useState('');
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
@@ -473,6 +452,43 @@ function Dashboard() {
   };
 
   const getTemperatureUnit = () => showFahrenheit ? '°F' : '°C';
+
+  // Function to search through row data for both fans and sensors
+  const searchInRow = (row: any, query: string, columns: any[]): boolean => {
+    const searchTerms = query.toLowerCase().split(' ').filter(term => term.length > 0);
+    
+    return searchTerms.every(term => {
+      return columns.some(column => {
+        const value = row[column.id];
+        if (value === null || value === undefined) return false;
+        
+        // Convert value to string for searching
+        const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+        return stringValue.toLowerCase().includes(term);
+      });
+    });
+  };
+
+  // Filter data based on search query
+  const filteredFans = useMemo(() => {
+    if (!searchQuery.trim()) return fans;
+    const fanColumns = [
+      { id: 'name' }, { id: 'status' }, { id: 'health' }, { id: 'speed' }
+    ];
+    return fans.filter(row => searchInRow(row, searchQuery, fanColumns));
+  }, [fans, searchQuery]);
+
+  const filteredSensors = useMemo(() => {
+    if (!searchQuery.trim()) return sensors.filter(sensor => sensor.reading > 0);
+    const sensorColumns = [
+      { id: 'name' }, { id: 'context' }, { id: 'reading' }, { id: 'critical' }
+    ];
+    return sensors.filter(sensor => sensor.reading > 0).filter(row => searchInRow(row, searchQuery, sensorColumns));
+  }, [sensors, searchQuery]);
+
+  const clearSearch = () => {
+    setSearchQuery('');
+  };
 
   // Calculate system health overview
   const getSystemHealthStats = () => {
@@ -563,10 +579,103 @@ function Dashboard() {
         />
       </Box>
 
+      {/* Centralized Search Box */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center',
+        mb: 4
+      }}>
+        <Box sx={{ width: { xs: '100%', sm: '400px', md: '350px' }, maxWidth: 400 }}>
+          <TextField
+            type="search"
+            size="small"
+            placeholder="Search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="search"
+            sx={{
+              width: '100%',
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: theme.palette.background.paper,
+                borderRadius: '24px',
+                fontSize: '0.875rem',
+                height: '36px',
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: theme.palette.grey[400],
+                  },
+                },
+                '&.Mui-focused': {
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: theme.palette.primary.main,
+                    borderWidth: 1,
+                  },
+                },
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: theme.palette.grey[300],
+                  transition: 'border-color 0.2s ease-in-out',
+                },
+              },
+              '& .MuiInputBase-input': {
+                padding: '8px 16px',
+                textAlign: 'left',
+                fontSize: '0.875rem',
+                '&::placeholder': {
+                  color: theme.palette.text.secondary,
+                  opacity: 0.7,
+                  fontStyle: 'normal',
+                },
+                // Hide the default search input clear button on webkit browsers
+                '&::-webkit-search-cancel-button': {
+                  display: 'none',
+                },
+                '&::-webkit-search-decoration': {
+                  display: 'none',
+                },
+              },
+            }}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end" sx={{ mr: 1 }}>
+                  {searchQuery ? (
+                    <IconButton
+                      size="small"
+                      onClick={clearSearch}
+                      aria-label="clear search"
+                      sx={{ 
+                        padding: '2px',
+                        color: theme.palette.text.secondary,
+                        '&:hover': {
+                          backgroundColor: theme.palette.action.hover,
+                          color: theme.palette.text.primary,
+                        },
+                        transition: 'all 0.2s ease-in-out'
+                      }}
+                    >
+                      <ClearIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  ) : (
+                    <SearchIcon 
+                      sx={{ 
+                        fontSize: 18, 
+                        color: theme.palette.text.secondary,
+                        transition: 'color 0.2s ease-in-out'
+                      }} 
+                    />
+                  )}
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Box>
+      </Box>
+
       {/* Fan Controllers - Now shown first */}
       <HPEDataTable
         title="Fan Controllers"
         icon={<AirIcon sx={{ fontSize: { xs: 24, sm: 28 }, color: 'primary.main' }} />}
+        originalDataLength={fans.length}
         columns={[
           {
             id: 'name',
@@ -639,27 +748,17 @@ function Dashboard() {
                 sx={{ fontWeight: 500 }}
               />
             )
-          },
-          {
-            id: 'trend',
-            label: 'Trend',
-            width: '10%',
-            align: 'center',
-            render: (value, row) => {
-              // Simulate trend (in real implementation, this would come from historical data)
-              const trend = Math.random() > 0.5 ? 'up' : Math.random() > 0.5 ? 'down' : 'flat';
-              return <TrendIndicator trend={trend} />;
-            }
           }
         ]}
-        data={fans}
-        emptyMessage="No fan controllers detected"
+        data={filteredFans}
+        emptyMessage={searchQuery ? `No fan controllers found for "${searchQuery}"` : "No fan controllers detected"}
       />
 
       {/* Temperature Sensors - Now shown second */}
       <HPEDataTable
         title="Temperature Sensors"
         icon={<ThermostatIcon sx={{ fontSize: { xs: 24, sm: 28 }, color: 'primary.main' }} />}
+        originalDataLength={sensors.filter(sensor => sensor.reading > 0).length}
         columns={[
           {
             id: 'name',
@@ -764,21 +863,10 @@ function Dashboard() {
                 sx={{ fontWeight: 500 }}
               />
             )
-          },
-          {
-            id: 'trend',
-            label: 'Trend',
-            width: '10%',
-            align: 'center',
-            render: (value, row) => {
-              // Simulate trend (in real implementation, this would come from historical data)
-              const trend = Math.random() > 0.5 ? 'up' : Math.random() > 0.5 ? 'down' : 'flat';
-              return <TrendIndicator trend={trend} />;
-            }
           }
         ]}
-        data={sensors.filter(sensor => sensor.reading > 0)}
-        emptyMessage="No temperature sensors detected"
+        data={filteredSensors}
+        emptyMessage={searchQuery ? `No temperature sensors found for "${searchQuery}"` : "No temperature sensors detected"}
       />
     </Box>
   );

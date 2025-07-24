@@ -30,11 +30,12 @@ import {
   Alert,
   Snackbar,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  IconButton
 } from "@mui/material";function FanControls({ onDebugLog }: { onDebugLog?: (message: string) => void }) {
   const [fans, setFans] = useState<any[]>([]);
   const [fanSpeeds, setFanSpeeds] = useState<Record<string, number>>({});
-  const [editAllMode, setEditAllMode] = useState(false);
+  const [editAllMode, setEditAllMode] = useState(true);
   const [globalSpeed, setGlobalSpeed] = useState(25);
   const [loading, setLoading] = useState(true);
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
@@ -43,6 +44,8 @@ import {
     message: string;
     severity: 'success' | 'error' | 'info' | 'warning';
   }>({ open: false, message: '', severity: 'info' });
+  const [userInteracting, setUserInteracting] = useState<Record<string, boolean>>({});
+  
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
@@ -186,7 +189,16 @@ import {
       setFans(data);
       
       const speeds: Record<string, number> = {};
-      data.forEach((fan: any) => speeds[fan.name] = Math.max(10, fan.speed)); // Ensure minimum 10%
+      data.forEach((fan: any) => {
+        // Only update fan speed if user is not currently interacting with that fan's slider
+        if (userInteracting[fan.name]) {
+          // Preserve the current slider value while user is interacting
+          speeds[fan.name] = fanSpeeds[fan.name] || Math.max(10, fan.speed);
+        } else {
+          // Update with fresh data when user is not interacting
+          speeds[fan.name] = Math.max(10, fan.speed);
+        }
+      });
       
       // If this refresh is after an update and we're in Edit All mode,
       // we should make sure all sliders show the same value
@@ -194,16 +206,26 @@ import {
         // In Edit All mode after update, set all fan speeds to match the global speed
         // This prevents the "drift" issue where one slider shows different value
         addDebugLog(`Edit All mode: synchronizing all sliders to ${globalSpeed}%`);
-        data.forEach((fan: any) => speeds[fan.name] = globalSpeed);
+        data.forEach((fan: any) => {
+          // Only sync non-interacting sliders
+          if (!userInteracting[fan.name]) {
+            speeds[fan.name] = globalSpeed;
+          }
+        });
       }
       
       setFanSpeeds(speeds);
       
-      // Update global speed to match if all fans are at the same speed
-      const speedValues = Object.values(speeds);
-      const uniqueSpeeds = Array.from(new Set(speedValues));
-      if (uniqueSpeeds.length === 1) {
-        setGlobalSpeed(uniqueSpeeds[0]);
+      // Update global speed to match if all fans are at the same speed (excluding interacting ones)
+      const nonInteractingSpeeds = Object.entries(speeds)
+        .filter(([fanName]) => !userInteracting[fanName])
+        .map(([, speed]) => speed);
+      
+      if (nonInteractingSpeeds.length > 0) {
+        const uniqueSpeeds = Array.from(new Set(nonInteractingSpeeds));
+        if (uniqueSpeeds.length === 1) {
+          setGlobalSpeed(uniqueSpeeds[0]);
+        }
       }
     } catch (error) {
       addDebugLog(`✗ Failed to fetch fans: ${(error as Error).message}`);
@@ -392,23 +414,25 @@ import {
                 Fine-tune individual fan speeds for optimal cooling performance
               </Typography>
             </Box>
-            <FormControlLabel
-              control={
-                <Switch 
-                  checked={editAllMode} 
-                  onChange={(e) => setEditAllMode(e.target.checked)}
-                  size={isMobile ? "small" : "medium"}
-                />
-              }
-              label={
-                <Typography variant="body2" sx={{ 
-                  fontWeight: 500,
-                  fontSize: { xs: '0.8rem', sm: '0.875rem' }
-                }}>
-                  Edit All
-                </Typography>
-              }
-            />
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'flex-end' }}>
+              <FormControlLabel
+                control={
+                  <Switch 
+                    checked={editAllMode} 
+                    onChange={(e) => setEditAllMode(e.target.checked)}
+                    size={isMobile ? "small" : "medium"}
+                  />
+                }
+                label={
+                  <Typography variant="body2" sx={{ 
+                    fontWeight: 500,
+                    fontSize: { xs: '0.8rem', sm: '0.875rem' }
+                  }}>
+                    Edit All
+                  </Typography>
+                }
+              />
+            </Box>
           </Box>
           
           {/* Content Section - Fan Control Grid */}
@@ -464,6 +488,18 @@ import {
                       <Slider
                         value={Math.max(10, fanSpeeds[fan.name] || fan.speed)}
                         onChange={(_, value) => handleFanSpeedChange(fan.name, value as number)}
+                        onChangeCommitted={() => {
+                          // Clear interaction state when user finishes dragging
+                          setUserInteracting(prev => ({ ...prev, [fan.name]: false }));
+                        }}
+                        onMouseDown={() => {
+                          // Set interaction state when user starts dragging
+                          setUserInteracting(prev => ({ ...prev, [fan.name]: true }));
+                        }}
+                        onTouchStart={() => {
+                          // Set interaction state for touch devices
+                          setUserInteracting(prev => ({ ...prev, [fan.name]: true }));
+                        }}
                         min={10}
                         max={100}
                         sx={{ 
@@ -569,14 +605,55 @@ import {
         </CardContent>
       </Card>
 
-      {/* Notification Snackbar */}
+      {/* HPE Design System Toast Notification */}
       <Snackbar
         open={notification.open}
-        autoHideDuration={6000}
+        autoHideDuration={8000}
         onClose={closeNotification}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        sx={{
+          '& .MuiSnackbarContent-root': {
+            minWidth: '384px', // HPE medium width
+            borderRadius: '8px',
+            boxShadow: theme.shadows[8],
+            backgroundColor: 'background.paper',
+            color: 'text.primary',
+            border: `1px solid ${theme.palette.divider}`
+          }
+        }}
       >
-        <Alert onClose={closeNotification} severity={notification.severity} sx={{ width: '100%' }}>
+        <Alert 
+          onClose={closeNotification} 
+          severity={notification.severity} 
+          variant="outlined"
+          sx={{ 
+            width: '100%',
+            minWidth: '384px',
+            backgroundColor: 'background.paper',
+            border: `1px solid ${
+              notification.severity === 'success' ? theme.palette.success.main :
+              notification.severity === 'error' ? theme.palette.error.main :
+              notification.severity === 'warning' ? theme.palette.warning.main :
+              theme.palette.info.main
+            }`,
+            '& .MuiAlert-icon': {
+              fontSize: '20px'
+            },
+            '& .MuiAlert-message': {
+              fontSize: '0.875rem',
+              fontWeight: 500
+            },
+            '& .MuiAlert-action': {
+              padding: 0,
+              '& .MuiIconButton-root': {
+                padding: '4px',
+                '&:hover': {
+                  backgroundColor: 'action.hover'
+                }
+              }
+            }
+          }}
+        >
           {notification.message}
         </Alert>
       </Snackbar>
@@ -795,14 +872,55 @@ function SafeSensorLimits({ onDebugLog }: { onDebugLog?: (message: string) => vo
           </Grid>
         </Grid>
 
-        {/* Notification Snackbar */}
+        {/* HPE Design System Toast Notification */}
         <Snackbar
           open={notification.open}
-          autoHideDuration={4000}
+          autoHideDuration={8000}
           onClose={handleCloseNotification}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+          sx={{
+            '& .MuiSnackbarContent-root': {
+              minWidth: '384px', // HPE medium width
+              borderRadius: '8px',
+              boxShadow: theme.shadows[8],
+              backgroundColor: 'background.paper',
+              color: 'text.primary',
+              border: `1px solid ${theme.palette.divider}`
+            }
+          }}
         >
-          <Alert onClose={handleCloseNotification} severity={notification.severity} sx={{ width: '100%' }}>
+          <Alert 
+            onClose={handleCloseNotification} 
+            severity={notification.severity} 
+            variant="outlined"
+            sx={{ 
+              width: '100%',
+              minWidth: '384px',
+              backgroundColor: 'background.paper',
+              border: `1px solid ${
+                notification.severity === 'success' ? theme.palette.success.main :
+                notification.severity === 'error' ? theme.palette.error.main :
+                notification.severity === 'warning' ? theme.palette.warning.main :
+                theme.palette.info.main
+              }`,
+              '& .MuiAlert-icon': {
+                fontSize: '20px'
+              },
+              '& .MuiAlert-message': {
+                fontSize: '0.875rem',
+                fontWeight: 500
+              },
+              '& .MuiAlert-action': {
+                padding: 0,
+                '& .MuiIconButton-root': {
+                  padding: '4px',
+                  '&:hover': {
+                    backgroundColor: 'action.hover'
+                  }
+                }
+              }
+            }}
+          >
             {notification.message}
           </Alert>
         </Snackbar>

@@ -15,19 +15,19 @@ import {
   MoreVert as MoreVertIcon,
   Settings as SettingsIcon,
   Logout as LogoutIcon,
-  Help as HelpIcon,
-  Notifications as NotificationsIcon,
   Brightness4 as DarkModeIcon,
-  Brightness7 as LightModeIcon
+  Brightness7 as LightModeIcon,
+  AccountBox as AccountBoxIcon
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { useTheme as useCustomTheme } from '../context/ThemeContext';
 
 interface ActionsMenuProps {
   onSettingsClick: () => void;
+  onAccountsClick: () => void;
 }
 
-const ActionsMenu: React.FC<ActionsMenuProps> = ({ onSettingsClick }) => {
+const ActionsMenu: React.FC<ActionsMenuProps> = ({ onSettingsClick, onAccountsClick }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
   const theme = useTheme();
@@ -47,6 +47,11 @@ const ActionsMenu: React.FC<ActionsMenuProps> = ({ onSettingsClick }) => {
 
   const handleSettingsClick = () => {
     onSettingsClick();
+    handleClose();
+  };
+
+  const handleAccountsClick = () => {
+    onAccountsClick();
     handleClose();
   };
 
@@ -130,13 +135,27 @@ const ActionsMenu: React.FC<ActionsMenuProps> = ({ onSettingsClick }) => {
           dense: false
         }}
       >
-        {/* Settings */}
+        {/* Accounts */}
+        <MenuItem onClick={handleAccountsClick}>
+          <ListItemIcon sx={{ color: 'text.secondary', minWidth: 36 }}>
+            <AccountBoxIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText 
+            primary="Accounts"
+            primaryTypographyProps={{
+              fontSize: '0.875rem',
+              fontWeight: 500
+            }}
+          />
+        </MenuItem>
+
+        {/* System Settings */}
         <MenuItem onClick={handleSettingsClick}>
           <ListItemIcon sx={{ color: 'text.secondary', minWidth: 36 }}>
             <SettingsIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText 
-            primary="Settings"
+            primary="System Settings"
             primaryTypographyProps={{
               fontSize: '0.875rem',
               fontWeight: 500
@@ -155,37 +174,6 @@ const ActionsMenu: React.FC<ActionsMenuProps> = ({ onSettingsClick }) => {
           </ListItemIcon>
           <ListItemText 
             primary={isDarkMode ? 'Light Mode' : 'Dark Mode'}
-            primaryTypographyProps={{
-              fontSize: '0.875rem',
-              fontWeight: 500
-            }}
-          />
-        </MenuItem>
-
-        {/* Divider */}
-        <Divider sx={{ my: 0.5 }} />
-
-        {/* Help */}
-        <MenuItem onClick={handleClose}>
-          <ListItemIcon sx={{ color: 'text.secondary', minWidth: 36 }}>
-            <HelpIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText 
-            primary="Help"
-            primaryTypographyProps={{
-              fontSize: '0.875rem',
-              fontWeight: 500
-            }}
-          />
-        </MenuItem>
-
-        {/* Notifications */}
-        <MenuItem onClick={handleClose}>
-          <ListItemIcon sx={{ color: 'text.secondary', minWidth: 36 }}>
-            <NotificationsIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText 
-            primary="Notifications"
             primaryTypographyProps={{
               fontSize: '0.875rem',
               fontWeight: 500

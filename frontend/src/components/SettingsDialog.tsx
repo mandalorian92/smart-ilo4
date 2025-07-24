@@ -23,10 +23,7 @@ import {
 } from '@mui/material';
 import { 
   Close as CloseIcon,
-  Lock as LockIcon,
   AccessTime as TimeIcon,
-  Security as SecurityIcon,
-  People as PeopleIcon,
   Router as RouterIcon,
   Visibility,
   VisibilityOff,
@@ -41,14 +38,9 @@ interface SettingsDialogProps {
 }
 
 export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
-  const [activeTab, setActiveTab] = useState<'password' | 'app-config' | 'users' | 'ilo'>('password');
-  const [oldPassword, setOldPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [activeTab, setActiveTab] = useState<'app-config' | 'ilo'>('app-config');
   const [sessionTimeout, setSessionTimeout] = useState<number>(30);
   const [appPort, setAppPort] = useState<number>(8443);
-  const [newUsername, setNewUsername] = useState('');
-  const [newUserPassword, setNewUserPassword] = useState('');
   
   // iLO Configuration state
   const [iloHost, setIloHost] = useState('');
@@ -61,7 +53,7 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const { user, changePassword, updateSessionTimeout, createUser, deleteUser, getAllUsers } = useAuth();
+  const { user, updateSessionTimeout } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -71,7 +63,7 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     }
   }, [user]);
 
-    // Load iLO configuration when dialog opens
+  // Load iLO configuration when dialog opens
   React.useEffect(() => {
     if (open) {
       loadILoConfig();
@@ -86,7 +78,6 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
       setSessionTimeout(config.sessionTimeout);
     } catch (error) {
       console.error('Failed to load app config:', error);
-      // Use defaults if loading fails
       setAppPort(8443);
       setSessionTimeout(30);
     }
@@ -98,7 +89,7 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
       if (config.configured) {
         setIloHost(config.host);
         setIloUsername(config.username);
-        setIloPassword(''); // Don't load password for security
+        setIloPassword('');
       }
     } catch (error) {
       console.error('Failed to load iLO config:', error);
@@ -109,78 +100,10 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     if (open) {
       setError('');
       setSuccess('');
-      setOldPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      setNewUsername('');
-      setNewUserPassword('');
-      setIloPassword(''); // Reset iLO password on open
-      setActiveTab('password');
+      setIloPassword('');
+      setActiveTab('app-config');
     }
   }, [open]);
-
-  const validatePassword = (password: string): string[] => {
-    const errors: string[] = [];
-    
-    if (password.length < 8) {
-      errors.push('Password must be at least 8 characters long');
-    }
-    if (!/[A-Z]/.test(password)) {
-      errors.push('Password must contain at least one uppercase letter');
-    }
-    if (!/[a-z]/.test(password)) {
-      errors.push('Password must contain at least one lowercase letter');
-    }
-    if (!/[0-9]/.test(password)) {
-      errors.push('Password must contain at least one number');
-    }
-    
-    return errors;
-  };
-
-  const handlePasswordChange = async () => {
-    setError('');
-    setSuccess('');
-
-    if (!oldPassword || !newPassword || !confirmPassword) {
-      setError('Please fill in all password fields');
-      return;
-    }
-
-    const passwordErrors = validatePassword(newPassword);
-    if (passwordErrors.length > 0) {
-      setError(passwordErrors[0]);
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setError('New passwords do not match');
-      return;
-    }
-
-    if (oldPassword === newPassword) {
-      setError('New password must be different from the current password');
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const success = await changePassword(oldPassword, newPassword);
-      if (success) {
-        setSuccess('Password changed successfully');
-        setOldPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-      } else {
-        setError('Current password is incorrect');
-      }
-    } catch (error) {
-      setError('An error occurred while changing the password');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSessionTimeoutChange = () => {
     setError('');
@@ -196,206 +119,117 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     setLoading(true);
 
     try {
-      // Get current configuration to compare
       const currentConfig = await getAppConfig();
       const portChanged = currentConfig.port !== appPort;
 
-      // Save the new configuration
       await saveAppConfig({
         port: appPort,
         sessionTimeout: sessionTimeout
       });
-      
-      // Update session timeout immediately
-      updateSessionTimeout(sessionTimeout);
-      
+
       if (portChanged) {
-        setSuccess(`Configuration saved! Server is restarting on port ${appPort}. Please wait...`);
+        setSuccess(`Configuration saved successfully. Server will restart on port ${appPort}.`);
         
-        // Wait a moment for the UI to update, then restart server
         setTimeout(async () => {
           try {
             await restartServerWithConfig(appPort);
-            
-            // Update the success message
-            setTimeout(() => {
-              setSuccess(`Server restarted successfully on port ${appPort}! You can now access the application at port ${appPort}.`);
-            }, 2000);
-            
           } catch (error) {
-            console.error('Failed to restart server:', error);
-            setError(`Configuration saved, but server restart failed. Please restart manually to use port ${appPort}.`);
+            console.error('Restart request sent:', error);
           }
         }, 1000);
       } else {
-        setSuccess(`App configuration saved successfully. Session timeout: ${sessionTimeout} minutes.`);
+        setSuccess('Configuration saved successfully');
       }
-      
-    } catch (error) {
-      console.error('Error saving app config:', error);
-      setError('Failed to save app configuration');
+    } catch (error: any) {
+      setError(error.message || 'Failed to save configuration');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreateUser = async () => {
+  const handleILoConfigSave = async () => {
     setError('');
     setSuccess('');
 
-    if (!newUsername || !newUserPassword) {
-      setError('Please fill in both username and password');
-      return;
-    }
-
-    const passwordErrors = validatePassword(newUserPassword);
-    if (passwordErrors.length > 0) {
-      setError(passwordErrors[0]);
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const success = await createUser(newUsername, newUserPassword);
-      if (success) {
-        setSuccess(`User "${newUsername}" created successfully`);
-        setNewUsername('');
-        setNewUserPassword('');
-      } else {
-        setError('Username already exists');
-      }
-    } catch (error) {
-      setError('An error occurred while creating the user');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteUser = async (userId: string, username: string) => {
-    if (!window.confirm(`Are you sure you want to delete user "${username}"?`)) {
-      return;
-    }
-
-    setError('');
-    setSuccess('');
-    setLoading(true);
-
-    try {
-      const success = await deleteUser(userId);
-      if (success) {
-        setSuccess(`User "${username}" deleted successfully`);
-      } else {
-        setError('Cannot delete this user');
-      }
-    } catch (error) {
-      setError('An error occurred while deleting the user');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // iLO Configuration functions
-  const handleTestConnection = async () => {
     if (!iloHost || !iloUsername || !iloPassword) {
-      setError('Please fill in all iLO connection fields');
+      setError('Please fill in all iLO configuration fields');
       return;
     }
 
-    setError('');
-    setSuccess('');
-    setTestingConnection(true);
-
-    try {
-      const result = await testILoConnection(iloHost, iloUsername, iloPassword);
-      if (result.success) {
-        setSuccess('iLO connection test successful!');
-      } else {
-        setError(`Connection test failed: ${result.message}`);
-      }
-    } catch (error) {
-      setError('Failed to test iLO connection');
-    } finally {
-      setTestingConnection(false);
-    }
-  };
-
-  const handleSaveILoConfig = async () => {
-    if (!iloHost || !iloUsername || !iloPassword) {
-      setError('Please fill in all iLO connection fields');
-      return;
-    }
-
-    setError('');
-    setSuccess('');
     setLoading(true);
 
     try {
       await saveILoConfig(iloHost, iloUsername, iloPassword);
       setSuccess('iLO configuration saved successfully');
-    } catch (error) {
-      setError('Failed to save iLO configuration');
+      setIloPassword('');
+    } catch (error: any) {
+      setError(error.message || 'Failed to save iLO configuration');
     } finally {
       setLoading(false);
     }
   };
 
-  const formatTimeRemaining = (seconds: number): string => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
+  const handleTestConnection = async () => {
+    setError('');
+    setSuccess('');
 
-    if (hours > 0) {
-      return `${hours}h ${minutes}m ${secs}s`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${secs}s`;
-    } else {
-      return `${secs}s`;
+    if (!iloHost || !iloUsername || !iloPassword) {
+      setError('Please fill in all iLO configuration fields before testing');
+      return;
+    }
+
+    setTestingConnection(true);
+
+    try {
+      const result = await testILoConnection(iloHost, iloUsername, iloPassword);
+
+      if (result.success) {
+        setSuccess('Connection successful! iLO is accessible.');
+      } else {
+        setError(result.message || 'Connection failed');
+      }
+    } catch (error: any) {
+      setError(error.message || 'Failed to test connection');
+    } finally {
+      setTestingConnection(false);
     }
   };
 
-  const timeoutOptions = [
-    { value: 15, label: '15 minutes' },
-    { value: 30, label: '30 minutes' },
-    { value: 60, label: '1 hour' },
-    { value: 120, label: '2 hours' },
-    { value: 240, label: '4 hours' },
-    { value: 480, label: '8 hours' }
-  ];
+  const handleClose = () => {
+    setActiveTab('app-config');
+    setError('');
+    setSuccess('');
+    setLoading(false);
+    setIloPassword('');
+    onClose();
+  };
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
+    <Dialog 
+      open={open} 
+      onClose={handleClose}
       maxWidth="md"
       fullWidth
-      fullScreen={isMobile}
       PaperProps={{
         sx: {
-          borderRadius: isMobile ? 0 : 3,
-          m: isMobile ? 0 : 2,
-          minWidth: { xs: 'auto', sm: 600, md: 700 },
-          maxWidth: { xs: 'auto', sm: 600, md: 700 }
+          borderRadius: 3,
+          minHeight: { xs: '80vh', sm: 600 }
         }
       }}
     >
-      {/* Header */}
       <DialogTitle sx={{ 
-        p: { xs: 2, sm: 3 },
-        borderBottom: `1px solid ${theme.palette.divider}`
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        borderBottom: `1px solid ${theme.palette.divider}`,
+        pb: 2
       }}>
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center' 
-        }}>
-          <Typography variant="h6" component="h2" sx={{ fontWeight: 600 }}>
-            Settings
-          </Typography>
-          <IconButton onClick={onClose} size="small">
-            <CloseIcon />
-          </IconButton>
-        </Box>
+        <Typography variant="h5" component="h2" sx={{ fontWeight: 600 }}>
+          System Settings
+        </Typography>
+        <IconButton onClick={handleClose}>
+          <CloseIcon />
+        </IconButton>
       </DialogTitle>
 
       <DialogContent sx={{ 
@@ -410,22 +244,6 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
           display: 'flex', 
           borderBottom: `1px solid ${theme.palette.divider}` 
         }}>
-          <Button
-            onClick={() => setActiveTab('password')}
-            variant="text"
-            sx={{
-              flex: 1,
-              borderRadius: 0,
-              textTransform: 'none',
-              fontWeight: activeTab === 'password' ? 600 : 400,
-              color: activeTab === 'password' ? 'primary.main' : 'text.secondary',
-              borderBottom: activeTab === 'password' ? `2px solid ${theme.palette.primary.main}` : 'none',
-              py: 2
-            }}
-            startIcon={<SecurityIcon />}
-          >
-            Password
-          </Button>
           <Button
             onClick={() => setActiveTab('app-config')}
             variant="text"
@@ -443,22 +261,6 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
             App Configuration
           </Button>
           <Button
-            onClick={() => setActiveTab('users')}
-            variant="text"
-            sx={{
-              flex: 1,
-              borderRadius: 0,
-              textTransform: 'none',
-              fontWeight: activeTab === 'users' ? 600 : 400,
-              color: activeTab === 'users' ? 'primary.main' : 'text.secondary',
-              borderBottom: activeTab === 'users' ? `2px solid ${theme.palette.primary.main}` : 'none',
-              py: 2
-            }}
-            startIcon={<PeopleIcon />}
-          >
-            Users
-          </Button>
-          <Button
             onClick={() => setActiveTab('ilo')}
             variant="text"
             sx={{
@@ -472,136 +274,29 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
             }}
             startIcon={<RouterIcon />}
           >
-            iLO Config
+            iLO Configuration
           </Button>
         </Box>
 
         {/* Content */}
         <Box sx={{ 
-          p: { xs: 2, sm: 3 },
-          flex: 1,
-          overflowY: 'auto',
-          minHeight: 0
+          flex: 1, 
+          p: 4, 
+          overflow: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 3
         }}>
           {error && (
-            <Alert 
-              severity="error" 
-              sx={{ 
-                mb: 2,
-                borderRadius: 2
-              }}
-            >
+            <Alert severity="error" onClose={() => setError('')}>
               {error}
             </Alert>
           )}
-
+          
           {success && (
-            <Alert 
-              severity="success" 
-              sx={{ 
-                mb: 2,
-                borderRadius: 2
-              }}
-            >
+            <Alert severity="success" onClose={() => setSuccess('')}>
               {success}
             </Alert>
-          )}
-
-          {activeTab === 'password' && (
-            <Box>
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                Change Password
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Update your account password to maintain security
-              </Typography>
-
-              <Stack spacing={3}>
-                <TextField
-                  label="Current Password"
-                  type="password"
-                  value={oldPassword}
-                  onChange={(e) => setOldPassword(e.target.value)}
-                  fullWidth
-                  variant="outlined"
-                  disabled={loading}
-                  InputProps={{
-                    startAdornment: (
-                      <LockIcon sx={{ 
-                        color: 'text.secondary', 
-                        mr: 1, 
-                        fontSize: 20 
-                      }} />
-                    ),
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2
-                    }
-                  }}
-                />
-
-                <TextField
-                  label="New Password"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  fullWidth
-                  variant="outlined"
-                  disabled={loading}
-                  InputProps={{
-                    startAdornment: (
-                      <LockIcon sx={{ 
-                        color: 'text.secondary', 
-                        mr: 1, 
-                        fontSize: 20 
-                      }} />
-                    ),
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2
-                    }
-                  }}
-                />
-
-                <TextField
-                  label="Confirm New Password"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  fullWidth
-                  variant="outlined"
-                  disabled={loading}
-                  InputProps={{
-                    startAdornment: (
-                      <LockIcon sx={{ 
-                        color: 'text.secondary', 
-                        mr: 1, 
-                        fontSize: 20 
-                      }} />
-                    ),
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2
-                    }
-                  }}
-                />
-
-                <Alert severity="info" sx={{ borderRadius: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                    Password Requirements:
-                  </Typography>
-                  <Typography variant="body2" component="div">
-                    • At least 8 characters long<br/>
-                    • Contains uppercase and lowercase letters<br/>
-                    • Contains at least one number<br/>
-                    • Contains at least one special character
-                  </Typography>
-                </Alert>
-              </Stack>
-            </Box>
           )}
 
           {activeTab === 'app-config' && (
@@ -616,43 +311,28 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
               <Stack spacing={4}>
                 {/* Session Management Section */}
                 <Box>
-                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, display: 'flex', alignItems: 'center' }}>
-                    <TimeIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
                     Session Management
                   </Typography>
                   
-                  <FormControl fullWidth sx={{ mb: 2 }}>
-                    <InputLabel>Session Timeout</InputLabel>
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Session Timeout (minutes)</InputLabel>
                     <Select
                       value={sessionTimeout}
-                      label="Session Timeout"
-                      onChange={(e) => setSessionTimeout(e.target.value as number)}
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 2
-                        }
-                      }}
+                      onChange={(e) => setSessionTimeout(Number(e.target.value))}
+                      label="Session Timeout (minutes)"
+                      disabled={loading}
                     >
-                      {timeoutOptions.map(option => (
-                        <MenuItem key={option.value} value={option.value}>
-                          {option.label}
-                        </MenuItem>
-                      ))}
+                      <MenuItem value={15}>15 minutes</MenuItem>
+                      <MenuItem value={30}>30 minutes</MenuItem>
+                      <MenuItem value={60}>1 hour</MenuItem>
+                      <MenuItem value={120}>2 hours</MenuItem>
+                      <MenuItem value={240}>4 hours</MenuItem>
                     </Select>
                   </FormControl>
 
-                  {user && (
-                    <Alert severity="info" sx={{ borderRadius: 2, mb: 2 }}>
-                      <Typography variant="body2">
-                        <strong>Current session timeout:</strong><br />
-                        {user.sessionTimeout} minutes (session will auto-logout after this period of inactivity)
-                      </Typography>
-                    </Alert>
-                  )}
-
-                  <Typography variant="body2" color="text.secondary">
-                    You will be automatically logged out after the specified period of inactivity.
-                    Changing this setting will apply to your current session immediately.
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    Sessions will automatically expire after this period of inactivity
                   </Typography>
                 </Box>
 
@@ -660,32 +340,23 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
 
                 {/* Application Port Section */}
                 <Box>
-                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, display: 'flex', alignItems: 'center' }}>
-                    <RouterIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
                     Application Port
                   </Typography>
                   
                   <TextField
-                    label="Port Number"
+                    label="Server Port"
                     type="number"
                     value={appPort}
-                    onChange={(e) => setAppPort(parseInt(e.target.value) || 8443)}
+                    onChange={(e) => setAppPort(Number(e.target.value))}
                     fullWidth
-                    inputProps={{
-                      min: 1024,
-                      max: 65535,
-                      step: 1
-                    }}
-                    sx={{
-                      mb: 2,
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 2
-                      }
-                    }}
-                    helperText="Port number for accessing the web interface (1024-65535)"
+                    size="small"
+                    disabled={loading}
+                    inputProps={{ min: 1024, max: 65535 }}
+                    helperText="Port number for the application server (1024-65535)"
                   />
 
-                  <Alert severity="info" sx={{ borderRadius: 2, mb: 2 }}>
+                  <Alert severity="info" sx={{ borderRadius: 2, mb: 2, mt: 2 }}>
                     <Typography variant="body2">
                       <strong>Automatic Restart:</strong> When you change the port, the server will restart automatically to apply the new setting.
                       Make sure the new port is not already in use.
@@ -701,248 +372,84 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
             </Box>
           )}
 
-          {activeTab === 'users' && (
+          {activeTab === 'ilo' && (
             <Box>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                User Management
+                iLO Configuration
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Create and manage user accounts for system access
+                Configure connection to HPE iLO management interface
               </Typography>
-
-              <Stack spacing={3}>
-                {/* Create New User Section */}
-                <Box sx={{ 
-                  p: 2, 
-                  border: `1px solid ${theme.palette.divider}`, 
-                  borderRadius: 2 
-                }}>
-                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-                    Create New User
-                  </Typography>
-                  <Stack spacing={2}>
-                    <TextField
-                      label="Username"
-                      value={newUsername}
-                      onChange={(e) => setNewUsername(e.target.value)}
-                      fullWidth
-                      variant="outlined"
-                      disabled={loading}
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 2
-                        }
-                      }}
-                    />
-                    <TextField
-                      label="Password"
-                      type="password"
-                      value={newUserPassword}
-                      onChange={(e) => setNewUserPassword(e.target.value)}
-                      fullWidth
-                      variant="outlined"
-                      disabled={loading}
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 2
-                        }
-                      }}
-                    />
-                    <Button
-                      onClick={handleCreateUser}
-                      variant="contained"
-                      disabled={loading || !newUsername || !newUserPassword}
-                      sx={{ 
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        fontWeight: 500
-                      }}
-                    >
-                      {loading ? <CircularProgress size={20} /> : 'Create User'}
-                    </Button>
-                  </Stack>
-                </Box>
-
-                {/* Existing Users List */}
-                <Box sx={{ 
-                  p: 2, 
-                  border: `1px solid ${theme.palette.divider}`, 
-                  borderRadius: 2 
-                }}>
-                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
-                    Existing Users
-                  </Typography>
-                  <Stack spacing={1}>
-                    {getAllUsers().map((userItem) => (
-                      <Box
-                        key={userItem.id}
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          p: 2,
-                          bgcolor: userItem.id === user?.id ? 'action.selected' : 'background.paper',
-                          border: `1px solid ${theme.palette.divider}`,
-                          borderRadius: 1
-                        }}
-                      >
-                        <Box>
-                          <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                            {userItem.username}
-                            {userItem.isDefault && (
-                              <Typography component="span" variant="caption" sx={{ 
-                                ml: 1, 
-                                color: 'primary.main',
-                                bgcolor: 'primary.50',
-                                px: 1,
-                                py: 0.5,
-                                borderRadius: 1
-                              }}>
-                                Default Admin
-                              </Typography>
-                            )}
-                            {userItem.id === user?.id && (
-                              <Typography component="span" variant="caption" sx={{ 
-                                ml: 1, 
-                                color: 'success.main',
-                                bgcolor: 'success.50',
-                                px: 1,
-                                py: 0.5,
-                                borderRadius: 1
-                              }}>
-                                You
-                              </Typography>
-                            )}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Created: {new Date(userItem.createdAt).toLocaleDateString()}
-                          </Typography>
-                        </Box>
-                        {!userItem.isDefault && userItem.id !== user?.id && (
-                          <Button
-                            onClick={() => handleDeleteUser(userItem.id, userItem.username)}
-                            variant="outlined"
-                            color="error"
-                            size="small"
-                            disabled={loading}
-                            sx={{ 
-                              borderRadius: 1,
-                              textTransform: 'none',
-                              minWidth: 'auto',
-                              px: 2
-                            }}
-                          >
-                            Delete
-                          </Button>
-                        )}
-                      </Box>
-                    ))}
-                  </Stack>
-                </Box>
-
-                <Alert severity="info" sx={{ borderRadius: 2 }}>
-                  <Typography variant="body2">
-                    <strong>Note:</strong> The default admin user cannot be deleted and provides system access recovery.
-                    You cannot delete your own account while logged in.
-                  </Typography>
-                </Alert>
-              </Stack>
-            </Box>
-          )}
-
-          {/* iLO Configuration Tab */}
-          {activeTab === 'ilo' && (
-            <Box sx={{ py: 2 }}>
-              <Typography variant="h6" sx={{ mb: 3, color: 'text.primary', fontWeight: 600 }}>
-                iLO Connection Settings
-              </Typography>
-              
-              <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
-                <Typography variant="body2">
-                  Configure your iLO connection settings. This allows the application to communicate with your HP iLO management interface.
-                  Test the connection before saving to ensure the credentials are correct.
-                </Typography>
-              </Alert>
 
               <Stack spacing={3}>
                 <TextField
                   label="iLO Host/IP Address"
-                  variant="outlined"
-                  fullWidth
                   value={iloHost}
                   onChange={(e) => setIloHost(e.target.value)}
-                  placeholder="192.168.1.100"
-                  helperText="Enter the IP address or hostname of your iLO interface"
+                  fullWidth
+                  size="small"
                   disabled={loading}
-                  sx={{ 
-                    '& .MuiOutlinedInput-root': { 
-                      borderRadius: 2 
-                    }
-                  }}
+                  placeholder="192.168.1.100 or ilo.example.com"
+                  helperText="Enter the IP address or hostname of your iLO interface"
                 />
 
                 <TextField
                   label="iLO Username"
-                  variant="outlined"
-                  fullWidth
                   value={iloUsername}
                   onChange={(e) => setIloUsername(e.target.value)}
-                  placeholder="Administrator"
-                  helperText="Enter the username for iLO access"
+                  fullWidth
+                  size="small"
                   disabled={loading}
-                  sx={{ 
-                    '& .MuiOutlinedInput-root': { 
-                      borderRadius: 2 
-                    }
-                  }}
+                  placeholder="administrator"
+                  helperText="iLO username with appropriate privileges"
                 />
 
                 <TextField
                   label="iLO Password"
-                  variant="outlined"
-                  fullWidth
-                  type={showIloPassword ? 'text' : 'password'}
+                  type={showIloPassword ? "text" : "password"}
                   value={iloPassword}
                   onChange={(e) => setIloPassword(e.target.value)}
-                  placeholder="Enter password"
-                  helperText="Enter the password for iLO access"
+                  fullWidth
+                  size="small"
                   disabled={loading}
+                  placeholder="Enter iLO password"
+                  helperText="Password will not be displayed after saving for security"
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
                         <IconButton
                           onClick={() => setShowIloPassword(!showIloPassword)}
                           edge="end"
-                          disabled={loading}
+                          size="small"
                         >
                           {showIloPassword ? <VisibilityOff /> : <Visibility />}
                         </IconButton>
                       </InputAdornment>
                     ),
                   }}
-                  sx={{ 
-                    '& .MuiOutlinedInput-root': { 
-                      borderRadius: 2 
-                    }
-                  }}
                 />
 
-                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
                   <Button
-                    onClick={handleTestConnection}
-                    disabled={!iloHost || !iloUsername || !iloPassword || testingConnection || loading}
                     variant="outlined"
-                    startIcon={testingConnection ? <CircularProgress size={16} /> : <TestIcon />}
-                    sx={{ 
-                      borderRadius: 2,
-                      textTransform: 'none',
-                      fontWeight: 500,
-                      flex: { xs: '1 1 100%', sm: '0 1 auto' }
-                    }}
+                    onClick={handleTestConnection}
+                    disabled={testingConnection || loading || !iloHost || !iloUsername || !iloPassword}
+                    startIcon={testingConnection ? <CircularProgress size={20} /> : <TestIcon />}
+                    sx={{ minWidth: 140 }}
                   >
                     {testingConnection ? 'Testing...' : 'Test Connection'}
                   </Button>
                 </Box>
+
+                <Alert severity="info" sx={{ borderRadius: 2 }}>
+                  <Typography variant="body2">
+                    <strong>Requirements:</strong><br/>
+                    • iLO must be accessible from this server<br/>
+                    • User must have "Login" and "iLO Settings" privileges<br/>
+                    • HTTPS connection will be used (self-signed certificates accepted)<br/>
+                    • Connection will be tested before saving
+                  </Typography>
+                </Alert>
               </Stack>
             </Box>
           )}
@@ -950,85 +457,31 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
       </DialogContent>
 
       <DialogActions sx={{ 
-        p: { xs: 2, sm: 3 },
+        p: 3, 
         borderTop: `1px solid ${theme.palette.divider}`,
-        gap: 1
+        justifyContent: 'space-between'
       }}>
-        <Button 
-          onClick={onClose}
-          variant="outlined"
-          sx={{ 
-            borderRadius: 2,
-            textTransform: 'none',
-            fontWeight: 500
-          }}
-        >
+        <Button onClick={handleClose} color="inherit">
           Cancel
         </Button>
-        
-        {activeTab === 'password' ? (
+        {activeTab === 'app-config' ? (
           <Button
-            onClick={handlePasswordChange}
             variant="contained"
-            disabled={loading || !oldPassword || !newPassword || !confirmPassword}
-            sx={{ 
-              borderRadius: 2,
-              textTransform: 'none',
-              fontWeight: 500
-            }}
-          >
-            {loading ? (
-              <>
-                <CircularProgress size={16} sx={{ mr: 1 }} />
-                Updating...
-              </>
-            ) : (
-              'Update Password'
-            )}
-          </Button>
-        ) : activeTab === 'app-config' ? (
-          <Button
             onClick={handleAppConfigChange}
-            variant="contained"
-            disabled={loading || (appPort < 1024 || appPort > 65535)}
-            sx={{ 
-              borderRadius: 2,
-              textTransform: 'none',
-              fontWeight: 500
-            }}
+            disabled={loading}
+            startIcon={loading ? <CircularProgress size={20} /> : <TimeIcon />}
           >
-            {loading ? (
-              <>
-                <CircularProgress size={16} sx={{ mr: 1 }} />
-                Saving...
-              </>
-            ) : (
-              'Apply Changes'
-            )}
-          </Button>
-        ) : activeTab === 'ilo' ? (
-          <Button
-            onClick={handleSaveILoConfig}
-            variant="contained"
-            disabled={loading || !iloHost || !iloUsername || !iloPassword}
-            sx={{ 
-              borderRadius: 2,
-              textTransform: 'none',
-              fontWeight: 500
-            }}
-          >
-            {loading ? (
-              <>
-                <CircularProgress size={16} sx={{ mr: 1 }} />
-                Saving...
-              </>
-            ) : (
-              'Save iLO Configuration'
-            )}
+            {loading ? 'Saving...' : 'Save Configuration'}
           </Button>
         ) : (
-          // Users tab - no main action button needed since actions are inline
-          null
+          <Button
+            variant="contained"
+            onClick={handleILoConfigSave}
+            disabled={loading || !iloHost || !iloUsername || !iloPassword}
+            startIcon={loading ? <CircularProgress size={20} /> : <RouterIcon />}
+          >
+            {loading ? 'Saving...' : 'Save iLO Config'}
+          </Button>
         )}
       </DialogActions>
     </Dialog>
