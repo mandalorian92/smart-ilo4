@@ -26,6 +26,7 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import HPEDataTable, { StatusIndicator, ProgressBar, TrendIndicator } from './HPEDataTable';
 
 // Circular progress component for gauges
 function CircularGauge({ 
@@ -119,23 +120,6 @@ function CircularGauge({
       </Box>
     </Box>
   );
-}
-
-// Status indicator component
-function StatusIndicator({ status, size = 'small' }: { status: 'ok' | 'warning' | 'error' | 'offline', size?: 'small' | 'medium' }) {
-  const theme = useTheme();
-  const iconSize = size === 'small' ? 16 : 20;
-  
-  const statusConfig = {
-    ok: { icon: CheckCircleIcon, color: theme.palette.success.main },
-    warning: { icon: WarningIcon, color: theme.palette.warning.main },
-    error: { icon: ErrorIcon, color: theme.palette.error.main },
-    offline: { icon: ErrorIcon, color: theme.palette.text.disabled }
-  };
-  
-  const { icon: Icon, color } = statusConfig[status];
-  
-  return <Icon sx={{ color, fontSize: iconSize }} />;
 }
 
 // Temperature card component following design guidelines
@@ -579,93 +563,223 @@ function Dashboard() {
         />
       </Box>
 
-      {/* Temperature Sensors */}
-      <Box sx={{ mb: 6 }}>
-        <Typography 
-          variant="h5" 
-          component="h2"
-          sx={{ 
-            fontSize: { xs: '1.3rem', sm: '1.5rem' },
-            fontWeight: 600,
-            mb: 3,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1.5,
-            color: 'text.primary'
-          }}
-        >
-          <ThermostatIcon sx={{ fontSize: { xs: 24, sm: 28 } }} /> 
-          Temperature Sensors
-        </Typography>
-        
-        <Grid 
-          container 
-          spacing={{ xs: 3, sm: 4, md: 3 }}
-          component="section"
-          sx={{ 
-            '& .MuiGrid-item': {
-              display: 'flex'
+      {/* Fan Controllers - Now shown first */}
+      <HPEDataTable
+        title="Fan Controllers"
+        icon={<AirIcon sx={{ fontSize: { xs: 24, sm: 28 }, color: 'primary.main' }} />}
+        columns={[
+          {
+            id: 'name',
+            label: 'Fan Name',
+            width: '25%',
+            render: (value, row) => (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {value}
+                </Typography>
+              </Box>
+            )
+          },
+          {
+            id: 'status',
+            label: 'Status',
+            width: '15%',
+            align: 'center',
+            render: (value, row) => {
+              let status: 'ok' | 'warning' | 'error' | 'offline' = 'ok';
+              if (row.status === 'Absent') status = 'offline';
+              else if (row.health !== 'OK' || row.status !== 'Enabled') status = 'warning';
+              else if (row.speed >= 85) status = 'warning';
+              
+              return (
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                  <StatusIndicator status={status} />
+                  <Chip 
+                    label={row.status} 
+                    size="small" 
+                    color={status === 'ok' ? 'success' : status === 'warning' ? 'warning' : 'error'}
+                    variant="outlined"
+                  />
+                </Box>
+              );
             }
-          }}
-        >
-          {sensors.filter(sensor => sensor.reading > 0).map((sensor, index) => (
-            <Grid 
-              item 
-              xs={12} 
-              sm={6} 
-              md={4} 
-              lg={3}
-              key={sensor.name}
-            >
-              <TemperatureCard sensor={sensor} showFahrenheit={showFahrenheit} />
-            </Grid>
-          ))}
-        </Grid>
-      </Box>
+          },
+          {
+            id: 'speed',
+            label: 'Speed',
+            width: '20%',
+            render: (value, row) => (
+              <ProgressBar value={value} maxValue={100} />
+            )
+          },
+          {
+            id: 'rpm',
+            label: 'RPM',
+            width: '15%',
+            align: 'center',
+            render: (value, row) => {
+              const rpm = Math.round((row.speed / 100) * 6000);
+              return (
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {rpm.toLocaleString()}
+                </Typography>
+              );
+            }
+          },
+          {
+            id: 'health',
+            label: 'Health',
+            width: '15%',
+            align: 'center',
+            render: (value, row) => (
+              <Chip 
+                label={value} 
+                size="small" 
+                color={value === 'OK' ? 'success' : 'error'}
+                sx={{ fontWeight: 500 }}
+              />
+            )
+          },
+          {
+            id: 'trend',
+            label: 'Trend',
+            width: '10%',
+            align: 'center',
+            render: (value, row) => {
+              // Simulate trend (in real implementation, this would come from historical data)
+              const trend = Math.random() > 0.5 ? 'up' : Math.random() > 0.5 ? 'down' : 'flat';
+              return <TrendIndicator trend={trend} />;
+            }
+          }
+        ]}
+        data={fans}
+        emptyMessage="No fan controllers detected"
+      />
 
-      {/* Fan Controllers */}
-      <Box>
-        <Typography 
-          variant="h5" 
-          component="h2"
-          sx={{ 
-            fontSize: { xs: '1.3rem', sm: '1.5rem' },
-            fontWeight: 600,
-            mb: 3,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1.5,
-            color: 'text.primary'
-          }}
-        >
-          <AirIcon sx={{ fontSize: { xs: 24, sm: 28 } }} /> 
-          Fan Controllers
-        </Typography>
-        
-        <Grid 
-          container 
-          spacing={{ xs: 3, sm: 4, md: 3 }}
-          component="section"
-          sx={{ 
-            '& .MuiGrid-item': {
-              display: 'flex'
+      {/* Temperature Sensors - Now shown second */}
+      <HPEDataTable
+        title="Temperature Sensors"
+        icon={<ThermostatIcon sx={{ fontSize: { xs: 24, sm: 28 }, color: 'primary.main' }} />}
+        columns={[
+          {
+            id: 'name',
+            label: 'Sensor Name',
+            width: '25%',
+            render: (value, row) => (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {value}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {row.context === 'CPU' ? 'CPU Sensor' : 
+                   row.context === 'Intake' ? 'Ambient Temperature' :
+                   row.context === 'SystemBoard' ? 'System Board' :
+                   row.context === 'PowerSupply' ? 'Power Supply' :
+                   row.context || 'System Sensor'}
+                </Typography>
+              </Box>
+            )
+          },
+          {
+            id: 'status',
+            label: 'Status',
+            width: '15%',
+            align: 'center',
+            render: (value, row) => {
+              const reading = showFahrenheit ? Math.round((row.reading * 9/5) + 32) : row.reading;
+              const critical = row.critical ? (showFahrenheit ? Math.round((row.critical * 9/5) + 32) : row.critical) : null;
+              
+              let status: 'ok' | 'warning' | 'error' = 'ok';
+              if (critical && reading >= critical) status = 'error';
+              else if (critical && reading >= (critical - (showFahrenheit ? 27 : 15))) status = 'warning';
+              
+              return (
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                  <StatusIndicator status={status} />
+                  <Chip 
+                    label={status === 'ok' ? 'Normal' : status === 'warning' ? 'Warning' : 'Critical'} 
+                    size="small" 
+                    color={status === 'ok' ? 'success' : status === 'warning' ? 'warning' : 'error'}
+                    variant="outlined"
+                  />
+                </Box>
+              );
             }
-          }}
-        >
-          {fans.map((fan, index) => (
-            <Grid 
-              item 
-              xs={12} 
-              sm={6} 
-              md={4} 
-              lg={3}
-              key={fan.name}
-            >
-              <FanCard fan={fan} />
-            </Grid>
-          ))}
-        </Grid>
-      </Box>
+          },
+          {
+            id: 'reading',
+            label: 'Current Temp',
+            width: '20%',
+            align: 'center',
+            render: (value, row) => {
+              const temp = convertTemperature(value);
+              const critical = row.critical ? convertTemperature(row.critical) : 100;
+              const maxTemp = showFahrenheit ? 200 : 100;
+              
+              let color;
+              if (row.critical && temp >= critical) color = 'error.main';
+              else if (row.critical && temp >= (critical - (showFahrenheit ? 27 : 15))) color = 'warning.main';
+              else color = 'success.main';
+              
+              return (
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, color }}>
+                    {temp}{getTemperatureUnit()}
+                  </Typography>
+                  <ProgressBar 
+                    value={temp} 
+                    maxValue={maxTemp} 
+                    color={color}
+                    showValue={false}
+                  />
+                </Box>
+              );
+            }
+          },
+          {
+            id: 'critical',
+            label: 'Critical Temp',
+            width: '15%',
+            align: 'center',
+            render: (value, row) => {
+              if (!value) return <Typography variant="body2" color="text.secondary">-</Typography>;
+              const criticalTemp = convertTemperature(value);
+              return (
+                <Typography variant="body2" sx={{ fontWeight: 500, color: 'error.main' }}>
+                  {criticalTemp}{getTemperatureUnit()}
+                </Typography>
+              );
+            }
+          },
+          {
+            id: 'context',
+            label: 'Location',
+            width: '15%',
+            align: 'center',
+            render: (value, row) => (
+              <Chip 
+                label={value || 'System'} 
+                size="small" 
+                variant="outlined"
+                sx={{ fontWeight: 500 }}
+              />
+            )
+          },
+          {
+            id: 'trend',
+            label: 'Trend',
+            width: '10%',
+            align: 'center',
+            render: (value, row) => {
+              // Simulate trend (in real implementation, this would come from historical data)
+              const trend = Math.random() > 0.5 ? 'up' : Math.random() > 0.5 ? 'down' : 'flat';
+              return <TrendIndicator trend={trend} />;
+            }
+          }
+        ]}
+        data={sensors.filter(sensor => sensor.reading > 0)}
+        emptyMessage="No temperature sensors detected"
+      />
     </Box>
   );
 }
