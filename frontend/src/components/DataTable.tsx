@@ -24,8 +24,9 @@ import ThermostatIcon from '@mui/icons-material/Thermostat';
 import AirIcon from '@mui/icons-material/Air';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
+import { searchInRow } from '../utils/searchUtils';
 
-interface HPEDataTableColumn {
+interface DataTableColumn {
   id: string;
   label: string;
   width?: string;
@@ -33,10 +34,10 @@ interface HPEDataTableColumn {
   render?: (value: any, row: any) => React.ReactNode;
 }
 
-interface HPEDataTableProps {
+interface DataTableProps {
   title: string;
   icon?: React.ReactNode;
-  columns: HPEDataTableColumn[];
+  columns: DataTableColumn[];
   data: any[];
   emptyMessage?: string;
   searchable?: boolean;
@@ -123,7 +124,7 @@ function ProgressBar({ value, maxValue = 100, color, showValue = true }: {
   );
 }
 
-export default function HPEDataTable({ 
+export default function DataTable({ 
   title, 
   icon, 
   columns, 
@@ -132,30 +133,14 @@ export default function HPEDataTable({
   searchable = false,
   searchPlaceholder = 'Search...',
   originalDataLength
-}: HPEDataTableProps) {
+}: DataTableProps) {
   const theme = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Function to search through row data (only used when searchable is true)
-  const searchInRow = (row: any, query: string): boolean => {
-    const searchTerms = query.toLowerCase().split(' ').filter(term => term.length > 0);
-    
-    return searchTerms.every(term => {
-      return columns.some(column => {
-        const value = row[column.id];
-        if (value === null || value === undefined) return false;
-        
-        // Convert value to string for searching
-        const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
-        return stringValue.toLowerCase().includes(term);
-      });
-    });
-  };
 
   // Filter data based on search query (only used when searchable is true)
   const filteredData = useMemo(() => {
     if (!searchable || !searchQuery.trim()) return data;
-    return data.filter(row => searchInRow(row, searchQuery));
+    return data.filter((row: any) => searchInRow(row, searchQuery, columns));
   }, [data, searchQuery, columns, searchable]);
 
   const clearSearch = () => {
@@ -306,7 +291,7 @@ export default function HPEDataTable({
         <Table sx={{ minWidth: 650 }}>
           <TableHead>
             <TableRow sx={{ backgroundColor: theme.palette.grey[50] }}>
-              {columns.map((column) => (
+              {columns.map((column: DataTableColumn) => (
                 <TableCell
                   key={column.id}
                   align={column.align || 'left'}
@@ -341,7 +326,7 @@ export default function HPEDataTable({
                 </TableCell>
               </TableRow>
             ) : (
-              displayData.map((row, index) => (
+              displayData.map((row: any, index: number) => (
                 <TableRow
                   key={index}
                   sx={{
@@ -355,7 +340,7 @@ export default function HPEDataTable({
                     transition: 'background-color 0.2s ease'
                   }}
                 >
-                  {columns.map((column) => (
+                  {columns.map((column: DataTableColumn) => (
                     <TableCell
                       key={column.id}
                       align={column.align || 'left'}

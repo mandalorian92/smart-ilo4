@@ -235,7 +235,7 @@ import {
 
   return (
     <Box component="section" role="main" aria-label="Fan Control System">
-      {/* HPE Page Header */}
+      {/* System Page Header */}
       <Box sx={{ mb: 4 }}>
         <Typography 
           variant="h4" 
@@ -262,7 +262,7 @@ import {
         </Typography>
       </Box>
 
-      {/* Fan Speed Presets - HPE Action Bar */}
+      {/* Fan Speed Presets - System Action Bar */}
       <Card 
         elevation={0}
         sx={{ 
@@ -374,7 +374,7 @@ import {
         </CardContent>
       </Card>
 
-      {/* Individual Fan Controls - HPE Content Grid */}
+      {/* Individual Fan Controls - System Content Grid */}
       <Card 
         elevation={0}
         sx={{ 
@@ -605,7 +605,7 @@ import {
         </CardContent>
       </Card>
 
-      {/* HPE Design System Toast Notification */}
+      {/* System Design Toast Notification */}
       <Snackbar
         open={notification.open}
         autoHideDuration={8000}
@@ -613,7 +613,7 @@ import {
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         sx={{
           '& .MuiSnackbarContent-root': {
-            minWidth: '384px', // HPE medium width
+            minWidth: '384px', // System medium width
             borderRadius: '8px',
             boxShadow: theme.shadows[8],
             backgroundColor: 'background.paper',

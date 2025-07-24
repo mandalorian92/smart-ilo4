@@ -4,95 +4,50 @@ import axios from "axios";
 const API_BASE = process.env.REACT_APP_API_URL || 
   (process.env.NODE_ENV === 'development' ? 'http://localhost:8443' : window.location.origin);
 
-export async function getSensors() {
-  const res = await axios.get(`${API_BASE}/sensors`);
-  return res.data;
-}
+// Create axios instance with common configuration
+const api = axios.create({
+  baseURL: API_BASE,
+  timeout: 10000,
+});
 
-export async function getAvailableSensors() {
-  const res = await axios.get(`${API_BASE}/sensors/available`);
+// Helper function for GET requests
+const get = async (endpoint: string) => {
+  const res = await api.get(endpoint);
   return res.data;
-}
+};
 
-export async function getActivePids() {
-  const res = await axios.get(`${API_BASE}/sensors/active-pids`);
+// Helper function for POST requests
+const post = async (endpoint: string, data?: any) => {
+  const res = await api.post(endpoint, data);
   return res.data;
-}
+};
 
-export async function getAllPids() {
-  const res = await axios.get(`${API_BASE}/sensors/pids`);
-  return res.data;
-}
+// Sensor API
+export const getSensors = () => get('/sensors');
+export const getAvailableSensors = () => get('/sensors/available');
+export const getActivePids = () => get('/sensors/active-pids');
+export const getAllPids = () => get('/sensors/pids');
+export const getHistory = () => get('/sensors/history');
+export const overrideSensor = (sensorId: string, value: number) => 
+  post('/sensors/override', { sensorId, value });
+export const resetSensors = () => post('/sensors/reset');
 
-export async function getFans() {
-  const res = await axios.get(`${API_BASE}/fans`);
-  return res.data;
-}
-
-export async function getHistory() {
-  const res = await axios.get(`${API_BASE}/sensors/history`);
-  return res.data;
-}
-
-export async function overrideSensor(sensorId: string, value: number) {
-  const res = await axios.post(`${API_BASE}/sensors/override`, { sensorId, value });
-  return res.data;
-}
-
-export async function resetSensors() {
-  const res = await axios.post(`${API_BASE}/sensors/reset`);
-  return res.data;
-}
-
-export async function overrideFan(fanId: string, speed: number) {
-  const res = await axios.post(`${API_BASE}/fans/override`, { fanId, speed });
-  return res.data;
-}
-
-export async function setAllFanSpeeds(speed: number) {
-  const res = await axios.post(`${API_BASE}/fans/set-all`, { speed });
-  return res.data;
-}
-
-export async function unlockFanControl() {
-  const res = await axios.post(`${API_BASE}/fans/unlock`);
-  return res.data;
-}
-
-export async function lockFanAtSpeed(fanId: number, speed: number) {
-  const res = await axios.post(`${API_BASE}/fans/lock`, { fanId, speed });
-  return res.data;
-}
-
-export async function setPidLowLimit(pidId: number, lowLimit: number) {
-  const res = await axios.post(`${API_BASE}/fans/pid-low-limit`, { pidId, lowLimit });
-  return res.data;
-}
-
-export async function getFanInfo() {
-  const res = await axios.get(`${API_BASE}/fans/info`);
-  return res.data;
-}
-
-export async function getFanPidInfo() {
-  const res = await axios.get(`${API_BASE}/fans/pid-info`);
-  return res.data;
-}
-
-export async function getFanGroupInfo() {
-  const res = await axios.get(`${API_BASE}/fans/group-info`);
-  return res.data;
-}
-
-export async function setSensorLowLimit(sensorId: number, lowLimit: number) {
-  const res = await axios.post(`${API_BASE}/sensors/set-low-limit`, { sensorId, lowLimit });
-  return res.data;
-}
-
-export async function invalidateFanCache() {
-  const res = await axios.post(`${API_BASE}/fans/invalidate-cache`);
-  return res.data;
-}
+// Fan API
+export const getFans = () => get('/fans');
+export const overrideFan = (fanId: string, speed: number) => 
+  post('/fans/override', { fanId, speed });
+export const setAllFanSpeeds = (speed: number) => post('/fans/set-all', { speed });
+export const unlockFanControl = () => post('/fans/unlock');
+export const lockFanAtSpeed = (fanId: number, speed: number) => 
+  post('/fans/lock', { fanId, speed });
+export const setPidLowLimit = (pidId: number, lowLimit: number) => 
+  post('/fans/pid-low-limit', { pidId, lowLimit });
+export const getFanInfo = () => get('/fans/info');
+export const getFanPidInfo = () => get('/fans/pid-info');
+export const getFanGroupInfo = () => get('/fans/group-info');
+export const setSensorLowLimit = (sensorId: number, lowLimit: number) => 
+  post('/sensors/set-low-limit', { sensorId, lowLimit });
+export const invalidateFanCache = () => post('/fans/invalidate-cache');
 
 // System Information API
 export interface SystemInformation {
@@ -103,15 +58,8 @@ export interface SystemInformation {
   iloFirmware: string;
 }
 
-export async function getSystemInformation(): Promise<SystemInformation> {
-  const res = await axios.get(`${API_BASE}/api/system/info`);
-  return res.data;
-}
-
-export async function refreshSystemInformation(): Promise<SystemInformation> {
-  const res = await axios.post(`${API_BASE}/api/system/info/refresh`);
-  return res.data;
-}
+export const getSystemInformation = (): Promise<SystemInformation> => get('/api/system/info');
+export const refreshSystemInformation = (): Promise<SystemInformation> => post('/api/system/info/refresh');
 
 // iLO Configuration API
 export interface ILoConfig {
@@ -121,25 +69,12 @@ export interface ILoConfig {
   configured: boolean;
 }
 
-export async function getILoConfig(): Promise<ILoConfig> {
-  const res = await axios.get(`${API_BASE}/api/ilo/config`);
-  return res.data;
-}
-
-export async function saveILoConfig(host: string, username: string, password: string): Promise<void> {
-  const res = await axios.post(`${API_BASE}/api/ilo/config`, { host, username, password });
-  return res.data;
-}
-
-export async function testILoConnection(host: string, username: string, password: string): Promise<{ success: boolean; message: string }> {
-  const res = await axios.post(`${API_BASE}/api/ilo/test`, { host, username, password });
-  return res.data;
-}
-
-export async function getILoStatus(): Promise<{ configured: boolean }> {
-  const res = await axios.get(`${API_BASE}/api/ilo/status`);
-  return res.data;
-}
+export const getILoConfig = (): Promise<ILoConfig> => get('/api/ilo/config');
+export const saveILoConfig = (host: string, username: string, password: string): Promise<void> => 
+  post('/api/ilo/config', { host, username, password });
+export const testILoConnection = (host: string, username: string, password: string): Promise<{ success: boolean; message: string }> => 
+  post('/api/ilo/test', { host, username, password });
+export const getILoStatus = (): Promise<{ configured: boolean }> => get('/api/ilo/status');
 
 // App Configuration API
 export interface AppConfig {
@@ -147,17 +82,6 @@ export interface AppConfig {
   sessionTimeout: number;
 }
 
-export async function getAppConfig(): Promise<AppConfig> {
-  const res = await axios.get(`${API_BASE}/api/app/config`);
-  return res.data;
-}
-
-export async function saveAppConfig(config: AppConfig): Promise<void> {
-  const res = await axios.post(`${API_BASE}/api/app/config`, config);
-  return res.data;
-}
-
-export async function restartServerWithConfig(port?: number): Promise<void> {
-  const res = await axios.post(`${API_BASE}/api/app/restart`, { port });
-  return res.data;
-}
+export const getAppConfig = (): Promise<AppConfig> => get('/api/app/config');
+export const saveAppConfig = (config: AppConfig): Promise<void> => post('/api/app/config', config);
+export const restartServerWithConfig = (port?: number): Promise<void> => post('/api/app/restart', { port });

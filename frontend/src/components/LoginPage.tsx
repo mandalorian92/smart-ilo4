@@ -15,7 +15,7 @@ import {
   Paper
 } from '@mui/material';
 import { Lock as LockIcon, Person as PersonIcon } from '@mui/icons-material';
-import HPELogo from './HPELogo';
+import SystemLogo from './SystemLogo';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
@@ -79,7 +79,7 @@ export default function LoginPage() {
             borderBottom: `1px solid ${theme.palette.divider}`
           }}>
             <Box sx={{ mb: 4, display: 'flex', justifyContent: 'center' }}>
-              <HPELogo height={isMobile ? 48 : 56} />
+              <SystemLogo height={isMobile ? 48 : 56} />
             </Box>
             <Typography
               variant="body1"

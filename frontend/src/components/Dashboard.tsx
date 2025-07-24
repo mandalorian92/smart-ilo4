@@ -27,7 +27,8 @@ import AirIcon from '@mui/icons-material/Air';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
-import HPEDataTable, { StatusIndicator, ProgressBar } from './HPEDataTable';
+import { searchInRow } from '../utils/searchUtils';
+import DataTable, { StatusIndicator, ProgressBar } from './DataTable';
 
 // Circular progress component for gauges
 function CircularGauge({ 
@@ -453,22 +454,6 @@ function Dashboard() {
 
   const getTemperatureUnit = () => showFahrenheit ? '°F' : '°C';
 
-  // Function to search through row data for both fans and sensors
-  const searchInRow = (row: any, query: string, columns: any[]): boolean => {
-    const searchTerms = query.toLowerCase().split(' ').filter(term => term.length > 0);
-    
-    return searchTerms.every(term => {
-      return columns.some(column => {
-        const value = row[column.id];
-        if (value === null || value === undefined) return false;
-        
-        // Convert value to string for searching
-        const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
-        return stringValue.toLowerCase().includes(term);
-      });
-    });
-  };
-
   // Filter data based on search query
   const filteredFans = useMemo(() => {
     if (!searchQuery.trim()) return fans;
@@ -672,9 +657,9 @@ function Dashboard() {
       </Box>
 
       {/* Fan Controllers - Now shown first */}
-      <HPEDataTable
+            <DataTable
         title="Fan Controllers"
-        icon={<AirIcon sx={{ fontSize: { xs: 24, sm: 28 }, color: 'primary.main' }} />}
+        icon={<AirIcon sx={{ color: theme.palette.primary.main }} />}
         originalDataLength={fans.length}
         columns={[
           {
@@ -755,7 +740,7 @@ function Dashboard() {
       />
 
       {/* Temperature Sensors - Now shown second */}
-      <HPEDataTable
+      <DataTable
         title="Temperature Sensors"
         icon={<ThermostatIcon sx={{ fontSize: { xs: 24, sm: 28 }, color: 'primary.main' }} />}
         originalDataLength={sensors.filter(sensor => sensor.reading > 0).length}

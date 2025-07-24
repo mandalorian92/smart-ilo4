@@ -32,7 +32,7 @@ import DebugTerminal from "./components/DebugTerminal";
 import InformationCard from "./components/InformationCard";
 import SystemHealthOverview from "./components/SystemHealthOverview";
 import SplashScreen from "./components/SplashScreen";
-import HPELogo from "./components/HPELogo";
+import SystemLogo from "./components/SystemLogo";
 import LoginPage from "./components/LoginPage";
 import FirstTimeSetup from "./components/FirstTimeSetup";
 import SettingsDialog from "./components/SettingsDialog";
@@ -227,7 +227,7 @@ function AppContent() {
         >
           {/* Left Section - Logo */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
-            <HPELogo height={isMobile ? 28 : isTablet ? 32 : 36} />
+            <SystemLogo height={isMobile ? 28 : isTablet ? 32 : 36} />
           </Box>
 
           {/* Center Section - User Info and Session (on larger screens) */}

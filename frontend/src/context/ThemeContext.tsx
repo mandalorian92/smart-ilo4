@@ -30,8 +30,8 @@ const getSystemPreference = (): 'light' | 'dark' => {
 const createCustomTheme = (mode: 'light' | 'dark'): Theme => {
   const isDark = mode === 'dark';
   
-  // HPE Official Colors from Design System
-  const hpeColors = {
+  // Official System Colors from Design System
+  const systemColors = {
     // Light theme colors
     light: {
       green: '#17eba0',
@@ -56,7 +56,7 @@ const createCustomTheme = (mode: 'light' | 'dark'): Theme => {
     appBarDark: '#1f2532',
   };
 
-  const currentColors = isDark ? hpeColors.dark : hpeColors.light;
+  const currentColors = isDark ? systemColors.dark : systemColors.light;
   
   return createTheme({
     breakpoints: {
@@ -73,13 +73,13 @@ const createCustomTheme = (mode: 'light' | 'dark'): Theme => {
       mode,
       primary: {
         main: currentColors.green,
-        light: isDark ? hpeColors.light.green : '#4df0b8',
-        dark: isDark ? '#005a46' : hpeColors.dark.green,
+        light: isDark ? systemColors.light.green : '#4df0b8',
+        dark: isDark ? '#005a46' : systemColors.dark.green,
       },
       secondary: {
         main: currentColors.blue,
-        light: isDark ? hpeColors.light.blue : '#33d4ff',
-        dark: isDark ? '#004d66' : hpeColors.dark.blue,
+        light: isDark ? systemColors.light.blue : '#33d4ff',
+        dark: isDark ? '#004d66' : systemColors.dark.blue,
       },
       background: {
         default: isDark ? '#121212' : '#fafafa',
@@ -92,30 +92,30 @@ const createCustomTheme = (mode: 'light' | 'dark'): Theme => {
       divider: isDark ? '#2e2e2e' : '#e0e0e0',
       success: {
         main: currentColors.green,
-        light: isDark ? hpeColors.light.green : '#4df0b8',
-        dark: isDark ? '#005a46' : hpeColors.dark.green,
+        light: isDark ? systemColors.light.green : '#4df0b8',
+        dark: isDark ? '#005a46' : systemColors.dark.green,
       },
       warning: {
         main: currentColors.orange,
-        light: isDark ? hpeColors.light.orange : '#ffcd70',
-        dark: isDark ? '#6d2f0b' : hpeColors.dark.orange,
+        light: isDark ? systemColors.light.orange : '#ffcd70',
+        dark: isDark ? '#6d2f0b' : systemColors.dark.orange,
       },
       error: {
         main: currentColors.red,
-        light: isDark ? hpeColors.light.red : '#fd8b8b',
-        dark: isDark ? '#723028' : hpeColors.dark.red,
+        light: isDark ? systemColors.light.red : '#fd8b8b',
+        dark: isDark ? '#723028' : systemColors.dark.red,
       },
       info: {
         main: currentColors.blue,
-        light: isDark ? hpeColors.light.blue : '#33d4ff',
-        dark: isDark ? '#004d66' : hpeColors.dark.blue,
+        light: isDark ? systemColors.light.blue : '#33d4ff',
+        dark: isDark ? '#004d66' : systemColors.dark.blue,
       },
     },
     components: {
       MuiAppBar: {
         styleOverrides: {
           root: {
-            backgroundColor: isDark ? '#1a1a1a' : '#ffffff', // HPE recommendation: White in light, dark in dark mode
+            backgroundColor: isDark ? '#1a1a1a' : '#ffffff', // System recommendation: White in light, dark in dark mode
             color: isDark ? '#ffffff' : '#2c2c2c', // High contrast text
             borderBottom: `1px solid ${isDark ? '#2e2e2e' : '#e0e0e0'}`, // Subtle border
             borderRadius: '0 0 12px 12px', // Rounded bottom corners for modern look
@@ -174,7 +174,7 @@ const createCustomTheme = (mode: 'light' | 'dark'): Theme => {
       MuiSlider: {
         styleOverrides: {
           root: {
-            color: currentColors.green, // Use HPE Green for sliders
+            color: currentColors.green, // Use System Green for sliders
           },
         },
       },
@@ -182,7 +182,7 @@ const createCustomTheme = (mode: 'light' | 'dark'): Theme => {
         styleOverrides: {
           root: {
             textTransform: 'none',
-            borderRadius: 4, // HPE standard border radius
+            borderRadius: 4, // System standard border radius
             fontWeight: 600,
             minHeight: 40,
             padding: '8px 24px',
@@ -218,7 +218,7 @@ const createCustomTheme = (mode: 'light' | 'dark'): Theme => {
         styleOverrides: {
           root: {
             '& .MuiOutlinedInput-root': {
-              borderRadius: 4, // HPE standard border radius
+              borderRadius: 4, // System standard border radius
               '& fieldset': {
                 borderWidth: 2,
                 borderColor: isDark ? '#3e3e3e' : '#d0d0d0',
@@ -238,7 +238,7 @@ const createCustomTheme = (mode: 'light' | 'dark'): Theme => {
       MuiPaper: {
         styleOverrides: {
           root: {
-            borderRadius: 8, // HPE standard border radius
+            borderRadius: 8, // System standard border radius
             backgroundColor: isDark ? '#1e1e1e' : '#ffffff',
           },
           outlined: {
@@ -248,7 +248,7 @@ const createCustomTheme = (mode: 'light' | 'dark'): Theme => {
       },
     },
     typography: {
-      fontFamily: '"MetricHPE", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"',
+      fontFamily: '"SystemFont", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"',
       h1: {
         fontWeight: 600,
         fontSize: '2.125rem',
