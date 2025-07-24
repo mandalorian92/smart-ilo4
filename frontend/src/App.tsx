@@ -36,6 +36,7 @@ import HistoryChart from "./components/HistoryChart";
 import FanControls from "./components/FanControls";
 import DebugTerminal from "./components/DebugTerminal";
 import InformationCard from "./components/InformationCard";
+import SystemHealthOverview from "./components/SystemHealthOverview";
 import SplashScreen from "./components/SplashScreen";
 import HPELogo from "./components/HPELogo";
 import LoginPage from "./components/LoginPage";
@@ -49,25 +50,97 @@ interface TabPanelProps {
   value: number;
 }
 
-function TabPanel(props: TabPanelProps) {
+const TabPanel = React.memo(function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
 
+  // Always render children but control visibility with CSS
   return (
     <div
       role="tabpanel"
-      hidden={value !== index}
       id={`simple-tabpanel-${index}`}
       aria-labelledby={`simple-tab-${index}`}
+      aria-hidden={value !== index}
+      style={{
+        display: value === index ? 'block' : 'none'
+      }}
       {...other}
     >
-      {value === index && (
-        <Box sx={{ py: 3 }}>
-          {children}
-        </Box>
-      )}
+      <Box sx={{ py: 3 }}>
+        {children}
+      </Box>
     </div>
   );
-}
+});
+
+// Memoized tab content components to prevent unnecessary re-renders
+const OverviewTabContent = React.memo(() => (
+  <Box 
+    role="tabpanel"
+    aria-labelledby="tab-0"
+    aria-describedby="tab-desc-0"
+  >
+    <div id="tab-desc-0" className="sr-only">
+      System overview showing system information and temperature history
+    </div>
+    
+    {/* Top Cards Section */}
+    <Box sx={{ mb: 4 }}>
+      <Grid container spacing={{ xs: 2, sm: 3 }}>
+        {/* Information Card - First on mobile, left side on desktop */}
+        <Grid item xs={12} md={6} lg={4}>
+          <InformationCard />
+        </Grid>
+        
+        {/* System Health Overview Card - Second on mobile, right side on desktop */}
+        <Grid item xs={12} md={6} lg={8}>
+          <SystemHealthOverview />
+        </Grid>
+      </Grid>
+    </Box>
+    
+    {/* Temperature History Chart */}
+    <HistoryChart />
+  </Box>
+));
+
+const MonitoringTabContent = React.memo(() => (
+  <Box 
+    role="tabpanel"
+    aria-labelledby="tab-1"
+    aria-describedby="tab-desc-1"
+  >
+    <div id="tab-desc-1" className="sr-only">
+      Real-time monitoring dashboard with sensor data and system health
+    </div>
+    <Dashboard />
+  </Box>
+));
+
+const ControlTabContent = React.memo<{ onDebugLog: (message: string) => void }>(({ onDebugLog }) => (
+  <Box 
+    role="tabpanel"
+    aria-labelledby="tab-2"
+    aria-describedby="tab-desc-2"
+  >
+    <div id="tab-desc-2" className="sr-only">
+      Fan speed control and system configuration options
+    </div>
+    <FanControls onDebugLog={onDebugLog} />
+  </Box>
+));
+
+const DebugTabContent = React.memo<{ debugLogs: string[] }>(({ debugLogs }) => (
+  <Box 
+    role="tabpanel"
+    aria-labelledby="tab-3"
+    aria-describedby="tab-desc-3"
+  >
+    <div id="tab-desc-3" className="sr-only">
+      Debug terminal showing system logs and diagnostic information
+    </div>
+    <DebugTerminal debugLogs={debugLogs} />
+  </Box>
+));
 
 function a11yProps(index: number) {
   return {
@@ -373,73 +446,22 @@ function AppContent() {
             </Tabs>
           </Box>
 
-          {/* Accessible Tab Content with Proper ARIA Labels */}
+          {/* Accessible Tab Content with Proper ARIA Labels - All content rendered for performance */}
           <Box sx={{ minHeight: 'calc(100vh - 200px)' }}>
             <TabPanel value={tabValue} index={0}>
-              {/* Overview Tab - System Information and Temperature History */}
-              <Box 
-                role="tabpanel"
-                aria-labelledby="tab-0"
-                aria-describedby="tab-desc-0"
-              >
-                <div id="tab-desc-0" className="sr-only">
-                  System overview showing system information and temperature history
-                </div>
-                
-                {/* Information Card */}
-                <Box sx={{ mb: 4 }}>
-                  <Grid container spacing={{ xs: 2, sm: 3 }}>
-                    <Grid item xs={12} md={6} lg={4}>
-                      <InformationCard />
-                    </Grid>
-                  </Grid>
-                </Box>
-                
-                {/* Temperature History Chart */}
-                <HistoryChart />
-              </Box>
+              <OverviewTabContent />
             </TabPanel>
 
             <TabPanel value={tabValue} index={1}>
-              {/* Monitoring Tab - Real-time Dashboard */}
-              <Box 
-                role="tabpanel"
-                aria-labelledby="tab-1"
-                aria-describedby="tab-desc-1"
-              >
-                <div id="tab-desc-1" className="sr-only">
-                  Real-time monitoring dashboard with sensor data and system health
-                </div>
-                <Dashboard />
-              </Box>
+              <MonitoringTabContent />
             </TabPanel>
 
             <TabPanel value={tabValue} index={2}>
-              {/* Control Tab - Fan Controller */}
-              <Box 
-                role="tabpanel"
-                aria-labelledby="tab-2"
-                aria-describedby="tab-desc-2"
-              >
-                <div id="tab-desc-2" className="sr-only">
-                  Fan speed control and system configuration options
-                </div>
-                <FanControls onDebugLog={handleDebugLog} />
-              </Box>
+              <ControlTabContent onDebugLog={handleDebugLog} />
             </TabPanel>
 
             <TabPanel value={tabValue} index={3}>
-              {/* Debug Tab - Debug Terminal */}
-              <Box 
-                role="tabpanel"
-                aria-labelledby="tab-3"
-                aria-describedby="tab-desc-3"
-              >
-                <div id="tab-desc-3" className="sr-only">
-                  Debug terminal showing system logs and diagnostic information
-                </div>
-                <DebugTerminal debugLogs={debugLogs} />
-              </Box>
+              <DebugTabContent debugLogs={debugLogs} />
             </TabPanel>
           </Box>
         </Container>

@@ -20,6 +20,7 @@ interface AuthContextType {
   getAllUsers: () => User[];
   changePassword: (oldPassword: string, newPassword: string) => Promise<boolean>;
   updateSessionTimeout: (timeout: number) => void;
+  extendSession: () => void;
   timeRemaining: number; // seconds until logout
 }
 
@@ -462,6 +463,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const extendSession = () => {
+    if (!user || !isAuthenticated) return;
+
+    // Extend the session by the user's configured timeout duration (default 30 minutes)
+    const newExpiry = Date.now() + (user.sessionTimeout * 60 * 1000);
+    safeSessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+      userId: user.id,
+      username: user.username,
+      expiresAt: newExpiry
+    }));
+    
+    // Reset the countdown timer
+    setTimeRemaining(user.sessionTimeout * 60);
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -475,6 +491,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       getAllUsers,
       changePassword,
       updateSessionTimeout,
+      extendSession,
       timeRemaining
     }}>
       {children}

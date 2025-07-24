@@ -15,7 +15,7 @@ import { Warning as WarningIcon, AccessTime as TimeIcon } from '@mui/icons-mater
 import { useAuth } from '../context/AuthContext';
 
 export default function SessionTimeoutWarning() {
-  const { timeRemaining, logout } = useAuth();
+  const { timeRemaining, logout, extendSession } = useAuth();
   const [open, setOpen] = useState(false);
   const [warningTime, setWarningTime] = useState(0);
   const theme = useTheme();
@@ -34,8 +34,7 @@ export default function SessionTimeoutWarning() {
 
   const handleExtendSession = () => {
     setOpen(false);
-    // In a real application, you might want to make an API call to extend the session
-    // For now, we'll just close the dialog and let the natural session continue
+    extendSession(); // This will extend the session by the user's configured timeout duration
   };
 
   const handleLogoutNow = () => {
