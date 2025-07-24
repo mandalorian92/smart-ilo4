@@ -18,16 +18,22 @@ import {
   CircularProgress,
   useTheme,
   useMediaQuery,
-  IconButton
+  IconButton,
+  InputAdornment
 } from '@mui/material';
 import { 
   Close as CloseIcon,
   Lock as LockIcon,
   AccessTime as TimeIcon,
   Security as SecurityIcon,
-  People as PeopleIcon
+  People as PeopleIcon,
+  Router as RouterIcon,
+  Visibility,
+  VisibilityOff,
+  Cable as TestIcon
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
+import { getILoConfig, saveILoConfig, testILoConnection, getAppConfig, saveAppConfig, restartServerWithConfig } from '../api';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -35,13 +41,22 @@ interface SettingsDialogProps {
 }
 
 export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
-  const [activeTab, setActiveTab] = useState<'password' | 'session' | 'users'>('password');
+  const [activeTab, setActiveTab] = useState<'password' | 'app-config' | 'users' | 'ilo'>('password');
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [sessionTimeout, setSessionTimeout] = useState<number>(30);
+  const [appPort, setAppPort] = useState<number>(8443);
   const [newUsername, setNewUsername] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
+  
+  // iLO Configuration state
+  const [iloHost, setIloHost] = useState('');
+  const [iloUsername, setIloUsername] = useState('');
+  const [iloPassword, setIloPassword] = useState('');
+  const [showIloPassword, setShowIloPassword] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -56,6 +71,40 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     }
   }, [user]);
 
+    // Load iLO configuration when dialog opens
+  React.useEffect(() => {
+    if (open) {
+      loadILoConfig();
+      loadAppConfig();
+    }
+  }, [open]);
+
+  const loadAppConfig = async () => {
+    try {
+      const config = await getAppConfig();
+      setAppPort(config.port);
+      setSessionTimeout(config.sessionTimeout);
+    } catch (error) {
+      console.error('Failed to load app config:', error);
+      // Use defaults if loading fails
+      setAppPort(8443);
+      setSessionTimeout(30);
+    }
+  };
+
+  const loadILoConfig = async () => {
+    try {
+      const config = await getILoConfig();
+      if (config.configured) {
+        setIloHost(config.host);
+        setIloUsername(config.username);
+        setIloPassword(''); // Don't load password for security
+      }
+    } catch (error) {
+      console.error('Failed to load iLO config:', error);
+    }
+  };
+
   React.useEffect(() => {
     if (open) {
       setError('');
@@ -65,6 +114,7 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
       setConfirmPassword('');
       setNewUsername('');
       setNewUserPassword('');
+      setIloPassword(''); // Reset iLO password on open
       setActiveTab('password');
     }
   }, [open]);
@@ -140,6 +190,55 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     setSuccess(`Session timeout updated to ${sessionTimeout} minutes`);
   };
 
+  const handleAppConfigChange = async () => {
+    setError('');
+    setSuccess('');
+    setLoading(true);
+
+    try {
+      // Get current configuration to compare
+      const currentConfig = await getAppConfig();
+      const portChanged = currentConfig.port !== appPort;
+
+      // Save the new configuration
+      await saveAppConfig({
+        port: appPort,
+        sessionTimeout: sessionTimeout
+      });
+      
+      // Update session timeout immediately
+      updateSessionTimeout(sessionTimeout);
+      
+      if (portChanged) {
+        setSuccess(`Configuration saved! Server is restarting on port ${appPort}. Please wait...`);
+        
+        // Wait a moment for the UI to update, then restart server
+        setTimeout(async () => {
+          try {
+            await restartServerWithConfig(appPort);
+            
+            // Update the success message
+            setTimeout(() => {
+              setSuccess(`Server restarted successfully on port ${appPort}! You can now access the application at port ${appPort}.`);
+            }, 2000);
+            
+          } catch (error) {
+            console.error('Failed to restart server:', error);
+            setError(`Configuration saved, but server restart failed. Please restart manually to use port ${appPort}.`);
+          }
+        }, 1000);
+      } else {
+        setSuccess(`App configuration saved successfully. Session timeout: ${sessionTimeout} minutes.`);
+      }
+      
+    } catch (error) {
+      console.error('Error saving app config:', error);
+      setError('Failed to save app configuration');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCreateUser = async () => {
     setError('');
     setSuccess('');
@@ -196,6 +295,51 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     }
   };
 
+  // iLO Configuration functions
+  const handleTestConnection = async () => {
+    if (!iloHost || !iloUsername || !iloPassword) {
+      setError('Please fill in all iLO connection fields');
+      return;
+    }
+
+    setError('');
+    setSuccess('');
+    setTestingConnection(true);
+
+    try {
+      const result = await testILoConnection(iloHost, iloUsername, iloPassword);
+      if (result.success) {
+        setSuccess('iLO connection test successful!');
+      } else {
+        setError(`Connection test failed: ${result.message}`);
+      }
+    } catch (error) {
+      setError('Failed to test iLO connection');
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
+  const handleSaveILoConfig = async () => {
+    if (!iloHost || !iloUsername || !iloPassword) {
+      setError('Please fill in all iLO connection fields');
+      return;
+    }
+
+    setError('');
+    setSuccess('');
+    setLoading(true);
+
+    try {
+      await saveILoConfig(iloHost, iloUsername, iloPassword);
+      setSuccess('iLO configuration saved successfully');
+    } catch (error) {
+      setError('Failed to save iLO configuration');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const formatTimeRemaining = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -223,13 +367,15 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="sm"
+      maxWidth="md"
       fullWidth
       fullScreen={isMobile}
       PaperProps={{
         sx: {
           borderRadius: isMobile ? 0 : 3,
-          m: isMobile ? 0 : 2
+          m: isMobile ? 0 : 2,
+          minWidth: { xs: 'auto', sm: 600, md: 700 },
+          maxWidth: { xs: 'auto', sm: 600, md: 700 }
         }
       }}
     >
@@ -252,7 +398,13 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
         </Box>
       </DialogTitle>
 
-      <DialogContent sx={{ p: 0 }}>
+      <DialogContent sx={{ 
+        p: 0, 
+        height: { xs: 'auto', sm: 500 },
+        minHeight: { xs: 400, sm: 500 },
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
         {/* Tab Navigation */}
         <Box sx={{ 
           display: 'flex', 
@@ -275,20 +427,20 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
             Password
           </Button>
           <Button
-            onClick={() => setActiveTab('session')}
+            onClick={() => setActiveTab('app-config')}
             variant="text"
             sx={{
               flex: 1,
               borderRadius: 0,
               textTransform: 'none',
-              fontWeight: activeTab === 'session' ? 600 : 400,
-              color: activeTab === 'session' ? 'primary.main' : 'text.secondary',
-              borderBottom: activeTab === 'session' ? `2px solid ${theme.palette.primary.main}` : 'none',
+              fontWeight: activeTab === 'app-config' ? 600 : 400,
+              color: activeTab === 'app-config' ? 'primary.main' : 'text.secondary',
+              borderBottom: activeTab === 'app-config' ? `2px solid ${theme.palette.primary.main}` : 'none',
               py: 2
             }}
             startIcon={<TimeIcon />}
           >
-            Session
+            App Configuration
           </Button>
           <Button
             onClick={() => setActiveTab('users')}
@@ -306,10 +458,31 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
           >
             Users
           </Button>
+          <Button
+            onClick={() => setActiveTab('ilo')}
+            variant="text"
+            sx={{
+              flex: 1,
+              borderRadius: 0,
+              textTransform: 'none',
+              fontWeight: activeTab === 'ilo' ? 600 : 400,
+              color: activeTab === 'ilo' ? 'primary.main' : 'text.secondary',
+              borderBottom: activeTab === 'ilo' ? `2px solid ${theme.palette.primary.main}` : 'none',
+              py: 2
+            }}
+            startIcon={<RouterIcon />}
+          >
+            iLO Config
+          </Button>
         </Box>
 
         {/* Content */}
-        <Box sx={{ p: { xs: 2, sm: 3 } }}>
+        <Box sx={{ 
+          p: { xs: 2, sm: 3 },
+          flex: 1,
+          overflowY: 'auto',
+          minHeight: 0
+        }}>
           {error && (
             <Alert 
               severity="error" 
@@ -431,49 +604,99 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
             </Box>
           )}
 
-          {activeTab === 'session' && (
+          {activeTab === 'app-config' && (
             <Box>
               <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                Session Management
+                App Configuration
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Configure automatic logout settings for enhanced security
+                Configure application settings and security options
               </Typography>
 
-              <Stack spacing={3}>
-                <FormControl fullWidth>
-                  <InputLabel>Session Timeout</InputLabel>
-                  <Select
-                    value={sessionTimeout}
-                    label="Session Timeout"
-                    onChange={(e) => setSessionTimeout(e.target.value as number)}
+              <Stack spacing={4}>
+                {/* Session Management Section */}
+                <Box>
+                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                    <TimeIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
+                    Session Management
+                  </Typography>
+                  
+                  <FormControl fullWidth sx={{ mb: 2 }}>
+                    <InputLabel>Session Timeout</InputLabel>
+                    <Select
+                      value={sessionTimeout}
+                      label="Session Timeout"
+                      onChange={(e) => setSessionTimeout(e.target.value as number)}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2
+                        }
+                      }}
+                    >
+                      {timeoutOptions.map(option => (
+                        <MenuItem key={option.value} value={option.value}>
+                          {option.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  {user && (
+                    <Alert severity="info" sx={{ borderRadius: 2, mb: 2 }}>
+                      <Typography variant="body2">
+                        <strong>Current session timeout:</strong><br />
+                        {user.sessionTimeout} minutes (session will auto-logout after this period of inactivity)
+                      </Typography>
+                    </Alert>
+                  )}
+
+                  <Typography variant="body2" color="text.secondary">
+                    You will be automatically logged out after the specified period of inactivity.
+                    Changing this setting will apply to your current session immediately.
+                  </Typography>
+                </Box>
+
+                <Divider />
+
+                {/* Application Port Section */}
+                <Box>
+                  <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                    <RouterIcon sx={{ mr: 1, fontSize: '1.2rem' }} />
+                    Application Port
+                  </Typography>
+                  
+                  <TextField
+                    label="Port Number"
+                    type="number"
+                    value={appPort}
+                    onChange={(e) => setAppPort(parseInt(e.target.value) || 8443)}
+                    fullWidth
+                    inputProps={{
+                      min: 1024,
+                      max: 65535,
+                      step: 1
+                    }}
                     sx={{
+                      mb: 2,
                       '& .MuiOutlinedInput-root': {
                         borderRadius: 2
                       }
                     }}
-                  >
-                    {timeoutOptions.map(option => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                    helperText="Port number for accessing the web interface (1024-65535)"
+                  />
 
-                {user && (
-                  <Alert severity="info" sx={{ borderRadius: 2 }}>
+                  <Alert severity="info" sx={{ borderRadius: 2, mb: 2 }}>
                     <Typography variant="body2">
-                      <strong>Current session timeout:</strong><br />
-                      {user.sessionTimeout} minutes (session will auto-logout after this period of inactivity)
+                      <strong>Automatic Restart:</strong> When you change the port, the server will restart automatically to apply the new setting.
+                      Make sure the new port is not already in use.
                     </Typography>
                   </Alert>
-                )}
 
-                <Typography variant="body2" color="text.secondary">
-                  You will be automatically logged out after the specified period of inactivity.
-                  Changing this setting will apply to your current session immediately.
-                </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    The application will be accessible at <code>https://your-server:{appPort}</code> after restart.
+                    Default port is 8443.
+                  </Typography>
+                </Box>
               </Stack>
             </Box>
           )}
@@ -626,6 +849,103 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
               </Stack>
             </Box>
           )}
+
+          {/* iLO Configuration Tab */}
+          {activeTab === 'ilo' && (
+            <Box sx={{ py: 2 }}>
+              <Typography variant="h6" sx={{ mb: 3, color: 'text.primary', fontWeight: 600 }}>
+                iLO Connection Settings
+              </Typography>
+              
+              <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
+                <Typography variant="body2">
+                  Configure your iLO connection settings. This allows the application to communicate with your HP iLO management interface.
+                  Test the connection before saving to ensure the credentials are correct.
+                </Typography>
+              </Alert>
+
+              <Stack spacing={3}>
+                <TextField
+                  label="iLO Host/IP Address"
+                  variant="outlined"
+                  fullWidth
+                  value={iloHost}
+                  onChange={(e) => setIloHost(e.target.value)}
+                  placeholder="192.168.1.100"
+                  helperText="Enter the IP address or hostname of your iLO interface"
+                  disabled={loading}
+                  sx={{ 
+                    '& .MuiOutlinedInput-root': { 
+                      borderRadius: 2 
+                    }
+                  }}
+                />
+
+                <TextField
+                  label="iLO Username"
+                  variant="outlined"
+                  fullWidth
+                  value={iloUsername}
+                  onChange={(e) => setIloUsername(e.target.value)}
+                  placeholder="Administrator"
+                  helperText="Enter the username for iLO access"
+                  disabled={loading}
+                  sx={{ 
+                    '& .MuiOutlinedInput-root': { 
+                      borderRadius: 2 
+                    }
+                  }}
+                />
+
+                <TextField
+                  label="iLO Password"
+                  variant="outlined"
+                  fullWidth
+                  type={showIloPassword ? 'text' : 'password'}
+                  value={iloPassword}
+                  onChange={(e) => setIloPassword(e.target.value)}
+                  placeholder="Enter password"
+                  helperText="Enter the password for iLO access"
+                  disabled={loading}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowIloPassword(!showIloPassword)}
+                          edge="end"
+                          disabled={loading}
+                        >
+                          {showIloPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{ 
+                    '& .MuiOutlinedInput-root': { 
+                      borderRadius: 2 
+                    }
+                  }}
+                />
+
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  <Button
+                    onClick={handleTestConnection}
+                    disabled={!iloHost || !iloUsername || !iloPassword || testingConnection || loading}
+                    variant="outlined"
+                    startIcon={testingConnection ? <CircularProgress size={16} /> : <TestIcon />}
+                    sx={{ 
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontWeight: 500,
+                      flex: { xs: '1 1 100%', sm: '0 1 auto' }
+                    }}
+                  >
+                    {testingConnection ? 'Testing...' : 'Test Connection'}
+                  </Button>
+                </Box>
+              </Stack>
+            </Box>
+          )}
         </Box>
       </DialogContent>
 
@@ -666,18 +986,45 @@ export default function SettingsDialog({ open, onClose }: SettingsDialogProps) {
               'Update Password'
             )}
           </Button>
-        ) : activeTab === 'session' ? (
+        ) : activeTab === 'app-config' ? (
           <Button
-            onClick={handleSessionTimeoutChange}
+            onClick={handleAppConfigChange}
             variant="contained"
-            disabled={!user || sessionTimeout === user.sessionTimeout}
+            disabled={loading || (appPort < 1024 || appPort > 65535)}
             sx={{ 
               borderRadius: 2,
               textTransform: 'none',
               fontWeight: 500
             }}
           >
-            Apply Changes
+            {loading ? (
+              <>
+                <CircularProgress size={16} sx={{ mr: 1 }} />
+                Saving...
+              </>
+            ) : (
+              'Apply Changes'
+            )}
+          </Button>
+        ) : activeTab === 'ilo' ? (
+          <Button
+            onClick={handleSaveILoConfig}
+            variant="contained"
+            disabled={loading || !iloHost || !iloUsername || !iloPassword}
+            sx={{ 
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 500
+            }}
+          >
+            {loading ? (
+              <>
+                <CircularProgress size={16} sx={{ mr: 1 }} />
+                Saving...
+              </>
+            ) : (
+              'Save iLO Configuration'
+            )}
           </Button>
         ) : (
           // Users tab - no main action button needed since actions are inline

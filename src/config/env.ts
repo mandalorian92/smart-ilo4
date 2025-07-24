@@ -7,7 +7,12 @@ const required = (name: string): string => {
   return value;
 };
 
-export const ILO_HOST = required("ILO_HOST");
-export const ILO_USERNAME = required("ILO_USERNAME");
-export const ILO_PASSWORD = required("ILO_PASSWORD");
+const optional = (name: string): string | undefined => {
+  return process.env[name];
+};
+
+// iLO configuration - now optional, can be configured via API
+export const ILO_HOST = optional("ILO_HOST");
+export const ILO_USERNAME = optional("ILO_USERNAME");
+export const ILO_PASSWORD = optional("ILO_PASSWORD");
 export const PORT = process.env.PORT || "3000";

@@ -8,6 +8,8 @@ import fansRouter from "./api/fans.js";
 import redfishRouter from "./api/redfish.js";
 import automationRouter from "./api/automation.js";
 import systemInfoRouter from "./api/systemInfo.js";
+import configRouter from "./api/config.js";
+import appConfigRouter from "./api/appConfig.js";
 
 // ES module equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -34,6 +36,8 @@ app.use("/fans", fansRouter);
 app.use("/redfish", redfishRouter);
 app.use("/automation", automationRouter);
 app.use("/api/system", systemInfoRouter);
+app.use("/api/ilo", configRouter);
+app.use("/api/app", appConfigRouter);
 
 // Serve static files from frontend build
 app.use(express.static(path.join(__dirname, "../frontend/build")));

@@ -29,5 +29,11 @@ COPY package.json yarn.lock ./
 # Only need dependencies at runtime
 RUN yarn install --production --frozen-lockfile
 
+# Create config directory for app configuration
+RUN mkdir -p config
+
+# Use a dynamic port - can be configured via app settings or environment
 EXPOSE 8443
+ENV DEFAULT_PORT=8443
+
 CMD ["node", "dist/index.js"]

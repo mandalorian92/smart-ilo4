@@ -11,8 +11,6 @@ import {
   Tab,
   Breadcrumbs,
   Link,
-  IconButton,
-  Tooltip,
   Chip,
   Badge,
   Grid
@@ -22,15 +20,11 @@ import {
   Visibility as MonitoringIcon,
   Tune as ControlIcon,
   BugReport as DebugIcon,
-  NavigateNext as NavigateNextIcon,
-  Settings as SettingsIcon,
-  Help as HelpIcon,
-  Notifications as NotificationsIcon,
-  Logout as LogoutIcon
+  NavigateNext as NavigateNextIcon
 } from '@mui/icons-material';
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
-import ThemeToggle from "./components/ThemeToggle";
+import ActionsMenu from "./components/ActionsMenu";
 import Dashboard from "./components/Dashboard";
 import HistoryChart from "./components/HistoryChart";
 import FanControls from "./components/FanControls";
@@ -157,7 +151,7 @@ function AppContent() {
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -165,10 +159,6 @@ function AppContent() {
 
   const handleDebugLog = (message: string) => {
     setDebugLogs(prev => [...prev, message].slice(-20)); // Keep last 20 logs
-  };
-
-  const handleLogout = () => {
-    logout();
   };
 
   // Define tab configuration following design guidelines
@@ -258,40 +248,8 @@ function AppContent() {
 
           {/* Right Section - Actions */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
-            {/* Settings Button */}
-            <Tooltip title="Settings">
-              <IconButton
-                onClick={() => setSettingsOpen(true)}
-                sx={{ 
-                  color: 'text.secondary',
-                  '&:hover': {
-                    color: 'primary.main',
-                    bgcolor: `${theme.palette.primary.main}08`
-                  }
-                }}
-              >
-                <SettingsIcon fontSize={isMobile ? "small" : "medium"} />
-              </IconButton>
-            </Tooltip>
-
-            {/* Logout Button */}
-            <Tooltip title="Logout">
-              <IconButton
-                onClick={handleLogout}
-                sx={{ 
-                  color: 'text.secondary',
-                  '&:hover': {
-                    color: 'error.main',
-                    bgcolor: `${theme.palette.error.main}08`
-                  }
-                }}
-              >
-                <LogoutIcon fontSize={isMobile ? "small" : "medium"} />
-              </IconButton>
-            </Tooltip>
-            
-            {/* Theme Toggle */}
-            <ThemeToggle />
+            {/* Actions Menu */}
+            <ActionsMenu onSettingsClick={() => setSettingsOpen(true)} />
           </Box>
         </Toolbar>
 

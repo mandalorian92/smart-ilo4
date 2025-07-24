@@ -1,13 +1,19 @@
 import { NodeSSH } from "node-ssh";
-import { ILO_HOST, ILO_USERNAME, ILO_PASSWORD } from "../config/env.js";
+import { getILoConfig } from "./config.js";
 
 export async function runIloCommand(command: string): Promise<string> {
+  const config = await getILoConfig();
+  
+  if (!config) {
+    throw new Error("iLO not configured. Please set up iLO connection in Settings.");
+  }
+
   const ssh = new NodeSSH();
   try {
     await ssh.connect({
-      host: ILO_HOST,
-      username: ILO_USERNAME,
-      password: ILO_PASSWORD,
+      host: config.host,
+      username: config.username,
+      password: config.password,
       algorithms: { 
         kex: ["diffie-hellman-group14-sha1"],
         serverHostKey: ["ssh-rsa"],

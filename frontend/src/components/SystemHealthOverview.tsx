@@ -87,7 +87,7 @@ function CircularGauge({
               component="div" 
               sx={{ 
                 fontWeight: 'bold',
-                fontSize: { xs: '1.5rem', sm: '2rem' },
+                fontSize: { xs: '1.2rem', sm: '1.5rem', md: '2rem' },
                 color: color,
                 lineHeight: 1
               }}
@@ -98,9 +98,10 @@ function CircularGauge({
               variant="caption" 
               sx={{ 
                 color: 'text.secondary',
-                fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                textAlign: 'center',
-                mt: 0.5
+                fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                fontWeight: 500,
+                mt: 0.5,
+                textAlign: 'center'
               }}
             >
               {label}
@@ -179,41 +180,55 @@ const SystemHealthOverview: React.FC = () => {
   const healthPercentage = healthStats.total > 0 ? (healthStats.healthy / healthStats.total) * 100 : 100;
 
   return (
-    <Card 
-      elevation={2}
-      sx={{ 
+    <Card
+      variant="outlined"
+      sx={{
+        height: '100%',
         border: `1px solid ${theme.palette.divider}`,
-        background: `linear-gradient(135deg, ${theme.palette.primary.main}15, ${theme.palette.secondary.main}05)`
+        borderRadius: 3,
+        transition: 'all 0.2s ease-in-out',
+        '&:hover': {
+          borderColor: theme.palette.primary.main,
+          boxShadow: `0 8px 24px ${theme.palette.primary.main}15`
+        }
       }}
     >
-      <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
-        <Typography 
-          variant="h5" 
-          component="h2"
-          sx={{ 
-            fontSize: { xs: '1.1rem', sm: '1.3rem' },
-            fontWeight: 600,
-            mb: 3,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1
-          }}
-        >
-          <SpeedIcon /> System Health Overview
-        </Typography>
+      <CardContent sx={{ p: { xs: 3, sm: 4 }, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'flex-start',
+          mb: 3
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <SpeedIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 600,
+                color: 'text.primary',
+                fontSize: { xs: '1rem', sm: '1.125rem' }
+              }}
+            >
+              System Health Overview
+            </Typography>
+          </Box>
+        </Box>
         
-        <Grid container spacing={3} alignItems="center">
-          <Grid item xs={12} md={5}>
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <Grid container spacing={3} alignItems="stretch" sx={{ height: '100%' }}>
+          <Grid item xs={12} md={4} sx={{ display: 'flex', alignItems: 'center' }}>
             <Box sx={{ 
               display: 'flex', 
               justifyContent: 'center', 
               alignItems: 'center',
-              py: 2
+              width: '100%',
+              py: { xs: 1, sm: 2 }
             }}>
               <CircularGauge
                 value={Math.round(healthPercentage)}
                 maxValue={100}
-                size={isMobile ? 120 : 140}
+                size={isMobile ? 80 : 120}
                 thickness={4}
                 color={
                   healthPercentage >= 90 ? theme.palette.success.main :
@@ -226,18 +241,23 @@ const SystemHealthOverview: React.FC = () => {
             </Box>
           </Grid>
           
-          <Grid item xs={12} md={7}>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={4}>
+          <Grid item xs={12} md={8} sx={{ display: 'flex', alignItems: 'center' }}>
+            <Grid container spacing={{ xs: 1, sm: 2 }} sx={{ width: '100%' }}>
+              <Grid item xs={4} sm={4} md={4}>
                 <Paper 
                   elevation={0} 
                   sx={{ 
-                    p: 3, 
+                    p: { xs: 0.5, sm: 1.5, md: 2.5 }, 
                     textAlign: 'center',
                     border: `2px solid ${theme.palette.success.main}`,
                     backgroundColor: `${theme.palette.success.main}08`,
                     borderRadius: 2,
                     transition: 'all 0.2s ease-in-out',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    minHeight: { xs: '70px', sm: '90px', md: '100px' },
                     '&:hover': {
                       backgroundColor: `${theme.palette.success.main}12`,
                       transform: 'translateY(-2px)',
@@ -250,8 +270,13 @@ const SystemHealthOverview: React.FC = () => {
                     sx={{ 
                       color: theme.palette.success.main,
                       fontWeight: 'bold',
-                      fontSize: { xs: '2rem', sm: '2.5rem' },
-                      mb: 1
+                      fontSize: { xs: '0.9rem', sm: '1.4rem', md: '1.8rem', lg: '2.2rem' },
+                      mb: { xs: 0.25, sm: 0.5 },
+                      lineHeight: 1,
+                      textAlign: 'center',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
                     }}
                   >
                     {healthStats.healthy}
@@ -261,7 +286,15 @@ const SystemHealthOverview: React.FC = () => {
                     sx={{ 
                       color: theme.palette.text.secondary,
                       fontWeight: 500,
-                      fontSize: { xs: '0.8rem', sm: '0.875rem' }
+                      fontSize: { xs: '0.55rem', sm: '0.65rem', md: '0.75rem' },
+                      lineHeight: 1.2,
+                      textAlign: 'center',
+                      wordWrap: 'break-word',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '100%'
                     }}
                   >
                     Healthy
@@ -269,16 +302,21 @@ const SystemHealthOverview: React.FC = () => {
                 </Paper>
               </Grid>
               
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={4} sm={4} md={4}>
                 <Paper 
                   elevation={0} 
                   sx={{ 
-                    p: 3, 
+                    p: { xs: 0.5, sm: 1.5, md: 2.5 }, 
                     textAlign: 'center',
                     border: `2px solid ${theme.palette.warning.main}`,
                     backgroundColor: `${theme.palette.warning.main}08`,
                     borderRadius: 2,
                     transition: 'all 0.2s ease-in-out',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    minHeight: { xs: '70px', sm: '90px', md: '100px' },
                     '&:hover': {
                       backgroundColor: `${theme.palette.warning.main}12`,
                       transform: 'translateY(-2px)',
@@ -291,8 +329,13 @@ const SystemHealthOverview: React.FC = () => {
                     sx={{ 
                       color: theme.palette.warning.main,
                       fontWeight: 'bold',
-                      fontSize: { xs: '2rem', sm: '2.5rem' },
-                      mb: 1
+                      fontSize: { xs: '0.9rem', sm: '1.4rem', md: '1.8rem', lg: '2.2rem' },
+                      mb: { xs: 0.25, sm: 0.5 },
+                      lineHeight: 1,
+                      textAlign: 'center',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
                     }}
                   >
                     {healthStats.warning}
@@ -302,7 +345,15 @@ const SystemHealthOverview: React.FC = () => {
                     sx={{ 
                       color: theme.palette.text.secondary,
                       fontWeight: 500,
-                      fontSize: { xs: '0.8rem', sm: '0.875rem' }
+                      fontSize: { xs: '0.55rem', sm: '0.65rem', md: '0.75rem' },
+                      lineHeight: 1.2,
+                      textAlign: 'center',
+                      wordWrap: 'break-word',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '100%'
                     }}
                   >
                     Warning
@@ -310,16 +361,21 @@ const SystemHealthOverview: React.FC = () => {
                 </Paper>
               </Grid>
               
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={4} sm={4} md={4}>
                 <Paper 
                   elevation={0} 
                   sx={{ 
-                    p: 3, 
+                    p: { xs: 0.5, sm: 1.5, md: 2.5 }, 
                     textAlign: 'center',
                     border: `2px solid ${theme.palette.error.main}`,
                     backgroundColor: `${theme.palette.error.main}08`,
                     borderRadius: 2,
                     transition: 'all 0.2s ease-in-out',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    minHeight: { xs: '70px', sm: '90px', md: '100px' },
                     '&:hover': {
                       backgroundColor: `${theme.palette.error.main}12`,
                       transform: 'translateY(-2px)',
@@ -332,8 +388,13 @@ const SystemHealthOverview: React.FC = () => {
                     sx={{ 
                       color: theme.palette.error.main,
                       fontWeight: 'bold',
-                      fontSize: { xs: '2rem', sm: '2.5rem' },
-                      mb: 1
+                      fontSize: { xs: '0.9rem', sm: '1.4rem', md: '1.8rem', lg: '2.2rem' },
+                      mb: { xs: 0.25, sm: 0.5 },
+                      lineHeight: 1,
+                      textAlign: 'center',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
                     }}
                   >
                     {healthStats.critical}
@@ -343,7 +404,15 @@ const SystemHealthOverview: React.FC = () => {
                     sx={{ 
                       color: theme.palette.text.secondary,
                       fontWeight: 500,
-                      fontSize: { xs: '0.8rem', sm: '0.875rem' }
+                      fontSize: { xs: '0.55rem', sm: '0.65rem', md: '0.75rem' },
+                      lineHeight: 1.2,
+                      textAlign: 'center',
+                      wordWrap: 'break-word',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '100%'
                     }}
                   >
                     Critical
@@ -353,6 +422,7 @@ const SystemHealthOverview: React.FC = () => {
             </Grid>
           </Grid>
         </Grid>
+        </Box>
       </CardContent>
     </Card>
   );

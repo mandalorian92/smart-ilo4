@@ -1,6 +1,6 @@
 import fetch from "node-fetch";
 import base64 from "base-64";
-import { ILO_HOST, ILO_USERNAME, ILO_PASSWORD } from "../config/env.js";
+import { getILoConfig } from "./config.js";
 import https from "https";
 
 const agent = new https.Agent({ rejectUnauthorized: false });
@@ -36,9 +36,15 @@ interface RedfishThermalResponse {
 }
 
 export async function getThermalData(): Promise<RedfishThermalResponse> {
-  const url = `https://${ILO_HOST}/redfish/v1/chassis/1/Thermal/`;
+  const config = await getILoConfig();
+  
+  if (!config) {
+    throw new Error("iLO not configured. Please set up iLO connection in Settings.");
+  }
+
+  const url = `https://${config.host}/redfish/v1/chassis/1/Thermal/`;
   const headers = {
-    'Authorization': `Basic ${base64.encode(`${ILO_USERNAME}:${ILO_PASSWORD}`)}`,
+    'Authorization': `Basic ${base64.encode(`${config.username}:${config.password}`)}`,
     'Accept': 'application/json',
     'User-Agent': 'Smart-iLO4-Controller'
   };

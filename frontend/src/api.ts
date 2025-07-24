@@ -1,7 +1,8 @@
 import axios from "axios";
 
-// In Docker/production, the API is served from the same origin
-const API_BASE = process.env.REACT_APP_API_URL || window.location.origin;
+// In development, use the backend port; in Docker/production, use same origin
+const API_BASE = process.env.REACT_APP_API_URL || 
+  (process.env.NODE_ENV === 'development' ? 'http://localhost:8444' : window.location.origin);
 
 export async function getSensors() {
   const res = await axios.get(`${API_BASE}/sensors`);
@@ -109,5 +110,54 @@ export async function getSystemInformation(): Promise<SystemInformation> {
 
 export async function refreshSystemInformation(): Promise<SystemInformation> {
   const res = await axios.post(`${API_BASE}/api/system/info/refresh`);
+  return res.data;
+}
+
+// iLO Configuration API
+export interface ILoConfig {
+  host: string;
+  username: string;
+  password?: string;
+  configured: boolean;
+}
+
+export async function getILoConfig(): Promise<ILoConfig> {
+  const res = await axios.get(`${API_BASE}/api/ilo/config`);
+  return res.data;
+}
+
+export async function saveILoConfig(host: string, username: string, password: string): Promise<void> {
+  const res = await axios.post(`${API_BASE}/api/ilo/config`, { host, username, password });
+  return res.data;
+}
+
+export async function testILoConnection(host: string, username: string, password: string): Promise<{ success: boolean; message: string }> {
+  const res = await axios.post(`${API_BASE}/api/ilo/test`, { host, username, password });
+  return res.data;
+}
+
+export async function getILoStatus(): Promise<{ configured: boolean }> {
+  const res = await axios.get(`${API_BASE}/api/ilo/status`);
+  return res.data;
+}
+
+// App Configuration API
+export interface AppConfig {
+  port: number;
+  sessionTimeout: number;
+}
+
+export async function getAppConfig(): Promise<AppConfig> {
+  const res = await axios.get(`${API_BASE}/api/app/config`);
+  return res.data;
+}
+
+export async function saveAppConfig(config: AppConfig): Promise<void> {
+  const res = await axios.post(`${API_BASE}/api/app/config`, config);
+  return res.data;
+}
+
+export async function restartServerWithConfig(port?: number): Promise<void> {
+  const res = await axios.post(`${API_BASE}/api/app/restart`, { port });
   return res.data;
 }
