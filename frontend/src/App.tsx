@@ -35,6 +35,7 @@ import SplashScreen from "./components/SplashScreen";
 import SystemLogo from "./components/SystemLogo";
 import LoginPage from "./components/LoginPage";
 import FirstTimeSetup from "./components/FirstTimeSetup";
+import InitialSetup from "./components/InitialSetup";
 import SettingsDialog from "./components/SettingsDialog";
 import AccountsDialog from "./components/AccountsDialog";
 import SessionTimeoutWarning from "./components/SessionTimeoutWarning";
@@ -416,7 +417,7 @@ function AppContent() {
 }
 
 function AuthenticatedApp() {
-  const { isAuthenticated, isFirstTimeSetup } = useAuth();
+  const { isAuthenticated, isFirstTimeSetup, needsInitialSetup } = useAuth();
 
   if (isFirstTimeSetup) {
     return <FirstTimeSetup />;
@@ -424,6 +425,10 @@ function AuthenticatedApp() {
 
   if (!isAuthenticated) {
     return <LoginPage />;
+  }
+
+  if (needsInitialSetup) {
+    return <InitialSetup />;
   }
 
   return <AppContent />;

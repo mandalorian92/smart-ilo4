@@ -82,3 +82,13 @@ export async function isILoConfigured(): Promise<boolean> {
   const config = await getILoConfig();
   return config !== null && !!config.host && !!config.username && !!config.password;
 }
+
+// Clear iLO configuration (for testing purposes)
+export async function clearILoConfig(): Promise<void> {
+  try {
+    await fs.unlink(CONFIG_FILE);
+  } catch (error) {
+    // File doesn't exist, which is fine
+    console.log('iLO config file does not exist or already cleared');
+  }
+}

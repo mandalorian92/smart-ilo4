@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { getILoStatus } from '../api';
 
 interface User {
   id: string;
@@ -12,6 +13,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isFirstTimeSetup: boolean;
+  needsInitialSetup: boolean;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   setupFirstUser: (username: string, password: string) => Promise<boolean>;
@@ -22,6 +24,7 @@ interface AuthContextType {
   updateSessionTimeout: (timeout: number) => void;
   extendSession: () => void;
   timeRemaining: number; // seconds until logout
+  completeInitialSetup: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -124,6 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isFirstTimeSetup, setIsFirstTimeSetup] = useState(false);
+  const [needsInitialSetup, setNeedsInitialSetup] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(0);
 
   // Create default admin user if no users exist
@@ -216,54 +220,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const passwordHash = await hashPassword(password);
       console.log('Password hashed successfully');
       
-      const userId = `user_${Date.now()}`;
-      const newUser: User = {
-        id: userId,
-        username,
-        createdAt: new Date().toISOString(),
-        sessionTimeout: 30 // Default 30 minutes
-      };
-
-      // Get existing users (should include default admin)
+      // Get existing users and passwords
       const existingUsersData = safeLocalStorage.getItem(USERS_STORAGE_KEY);
       const existingPasswordsData = safeLocalStorage.getItem(PASSWORDS_STORAGE_KEY);
       
-      const users = existingUsersData ? JSON.parse(existingUsersData) : {};
-      const passwords = existingPasswordsData ? JSON.parse(existingPasswordsData) : {};
-      
-      // Add new user
-      users[userId] = newUser;
-      passwords[userId] = passwordHash;
-
-      // Try to store data in localStorage
-      try {
-        safeLocalStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-        safeLocalStorage.setItem(PASSWORDS_STORAGE_KEY, JSON.stringify(passwords));
-        console.log('User data stored successfully');
-      } catch (storageError) {
-        console.error('Failed to store data:', storageError);
+      if (!existingUsersData || !existingPasswordsData) {
+        console.error('No existing user data found');
         return false;
       }
       
-      setUser(newUser);
+      const users = JSON.parse(existingUsersData);
+      const passwords = JSON.parse(existingPasswordsData);
+      
+      // Find the admin user
+      const adminUserId = Object.keys(users).find(userId => users[userId].username === username);
+      
+      if (!adminUserId) {
+        console.error('Admin user not found');
+        return false;
+      }
+      
+      // Update the admin user - remove isDefault flag and update password
+      const updatedUser: User = {
+        ...users[adminUserId],
+        isDefault: false // Remove default flag - password has been changed
+      };
+      
+      users[adminUserId] = updatedUser;
+      passwords[adminUserId] = passwordHash;
+
+      // Store updated data
+      try {
+        safeLocalStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+        safeLocalStorage.setItem(PASSWORDS_STORAGE_KEY, JSON.stringify(passwords));
+        console.log('Admin user updated successfully - password changed, default flag removed');
+      } catch (storageError) {
+        console.error('Failed to store updated user data:', storageError);
+        return false;
+      }
+      
+      setUser(updatedUser);
       setIsAuthenticated(true);
       setIsFirstTimeSetup(false);
       
       // Create session
       try {
-        const sessionExpiry = Date.now() + (newUser.sessionTimeout * 60 * 1000);
+        const sessionExpiry = Date.now() + (updatedUser.sessionTimeout * 60 * 1000);
         safeSessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
-          userId,
+          userId: adminUserId,
           username,
           expiresAt: sessionExpiry
         }));
         console.log('Session created successfully');
       } catch (sessionError) {
         console.error('Failed to create session:', sessionError);
-        // Don't return false here as the user is still created
+        // Don't return false here as the user is still updated
       }
       
-      setTimeRemaining(newUser.sessionTimeout * 60);
+      setTimeRemaining(updatedUser.sessionTimeout * 60);
       console.log('First user setup completed successfully');
       return true;
     } catch (error) {
@@ -365,10 +379,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
+      console.log('Login attempt:', { username, password: password.substring(0, 3) + '...' });
+      
       const usersData = safeLocalStorage.getItem(USERS_STORAGE_KEY);
       const passwordsData = safeLocalStorage.getItem(PASSWORDS_STORAGE_KEY);
       
+      console.log('Users data exists:', !!usersData);
+      console.log('Passwords data exists:', !!passwordsData);
+      
       if (!usersData || !passwordsData) {
+        console.log('No user data found - login failed');
         return false;
       }
 
@@ -376,15 +396,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const passwords = JSON.parse(passwordsData);
       const passwordHash = await hashPassword(password);
       
+      console.log('Available users:', Object.keys(users));
+      console.log('Password hash generated:', passwordHash.substring(0, 8) + '...');
+      
       // Find user by username
-      const foundUserId = Object.keys(users).find(userId => 
-        users[userId].username === username && passwords[userId] === passwordHash
-      );
+      const foundUserId = Object.keys(users).find(userId => {
+        const userMatch = users[userId].username === username;
+        const passwordMatch = passwords[userId] === passwordHash;
+        console.log(`Checking user ${userId}: username match=${userMatch}, password match=${passwordMatch}`);
+        return userMatch && passwordMatch;
+      });
+      
+      console.log('Found user ID:', foundUserId);
       
       if (foundUserId) {
         const foundUser = users[foundUserId];
+        
+        // If user is no longer default but trying to use default password, deny access
+        if (!foundUser.isDefault && password === 'Changemen0w') {
+          console.log('Default password attempted on non-default user - access denied');
+          return false;
+        }
+        
         setUser(foundUser);
         setIsAuthenticated(true);
+        
+        // Check if initial setup is needed
+        try {
+          const iloStatus = await getILoStatus();
+          
+          // If iLO is not configured, always require initial setup
+          if (!iloStatus.configured) {
+            setNeedsInitialSetup(true);
+          } else {
+            // iLO is configured - only require setup if using default password on default user
+            if (foundUser.isDefault && password === 'Changemen0w') {
+              setNeedsInitialSetup(true);
+            } else {
+              setNeedsInitialSetup(false);
+            }
+          }
+        } catch (error) {
+          console.error('Error checking iLO status:', error);
+          // If we can't check iLO status, only require setup for default password on default user
+          if (foundUser.isDefault && password === 'Changemen0w') {
+            setNeedsInitialSetup(true);
+          } else {
+            setNeedsInitialSetup(false);
+          }
+        }
         
         // Create session
         const sessionExpiry = Date.now() + (foundUser.sessionTimeout * 60 * 1000);
@@ -408,8 +468,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null);
     setIsAuthenticated(false);
+    setNeedsInitialSetup(false);
     setTimeRemaining(0);
     safeSessionStorage.removeItem(SESSION_STORAGE_KEY);
+  };
+
+  const completeInitialSetup = () => {
+    setNeedsInitialSetup(false);
   };
 
   const changePassword = async (oldPassword: string, newPassword: string): Promise<boolean> => {
@@ -483,6 +548,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       isAuthenticated,
       isFirstTimeSetup,
+      needsInitialSetup,
       login,
       logout,
       setupFirstUser,
@@ -492,7 +558,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       changePassword,
       updateSessionTimeout,
       extendSession,
-      timeRemaining
+      timeRemaining,
+      completeInitialSetup
     }}>
       {children}
     </AuthContext.Provider>

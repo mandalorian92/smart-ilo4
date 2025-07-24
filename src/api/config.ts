@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getILoConfig, saveILoConfig, testILoConnection, isILoConfigured } from '../services/config.js';
+import { getILoConfig, saveILoConfig, testILoConnection, isILoConfigured, clearILoConfig } from '../services/config.js';
 
 const router = Router();
 
@@ -72,6 +72,17 @@ router.get('/status', async (req, res) => {
   } catch (error) {
     console.error('Error checking iLO status:', error);
     res.status(500).json({ error: 'Failed to check iLO status' });
+  }
+});
+
+// Reset iLO configuration (for testing purposes)
+router.delete('/config', async (req, res) => {
+  try {
+    await clearILoConfig();
+    res.json({ success: true, message: 'iLO configuration cleared successfully' });
+  } catch (error) {
+    console.error('Error clearing iLO config:', error);
+    res.status(500).json({ error: 'Failed to clear iLO configuration' });
   }
 });
 
