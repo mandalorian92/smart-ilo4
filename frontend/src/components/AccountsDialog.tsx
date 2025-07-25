@@ -57,7 +57,7 @@ export default function AccountsDialog({ open, onClose }: AccountsDialogProps) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const { user, changePassword, createUser, deleteUser, getAllUsers } = useAuth();
+  const { user, changePassword, createUser, deleteUser, getAllUsers, logout } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -92,6 +92,25 @@ export default function AccountsDialog({ open, onClose }: AccountsDialogProps) {
     onClose();
   };
 
+  const validatePassword = (password: string): string[] => {
+    const errors: string[] = [];
+    
+    if (password.length < 8) {
+      errors.push('Password must be at least 8 characters long');
+    }
+    if (!/[A-Z]/.test(password)) {
+      errors.push('Password must contain at least one uppercase letter');
+    }
+    if (!/[a-z]/.test(password)) {
+      errors.push('Password must contain at least one lowercase letter');
+    }
+    if (!/[0-9]/.test(password)) {
+      errors.push('Password must contain at least one number');
+    }
+    
+    return errors;
+  };
+
   const handlePasswordChange = async () => {
     if (!oldPassword || !newPassword || !confirmPassword) {
       setError('All fields are required');
@@ -103,8 +122,9 @@ export default function AccountsDialog({ open, onClose }: AccountsDialogProps) {
       return;
     }
 
-    if (newPassword.length < 8) {
-      setError('New password must be at least 8 characters long');
+    const passwordErrors = validatePassword(newPassword);
+    if (passwordErrors.length > 0) {
+      setError(passwordErrors.join('. '));
       return;
     }
 
@@ -112,12 +132,37 @@ export default function AccountsDialog({ open, onClose }: AccountsDialogProps) {
     setError('');
 
     try {
-      await changePassword(oldPassword, newPassword);
-      setSuccess('Password changed successfully');
+      console.log('Attempting to change password...');
+      console.log('Old password length:', oldPassword.length);
+      console.log('New password length:', newPassword.length);
+      
+      const success = await changePassword(oldPassword, newPassword);
+      console.log('Change password result:', success);
+      
+      if (!success) {
+        setError('Failed to change password. Please check your current password is correct.');
+        return;
+      }
+      
+      console.log('Password change successful - proceeding with logout');
+      setSuccess('Password changed successfully! You will be logged out in 3 seconds for security...');
       setOldPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      
+      // Auto logout after 3 seconds for security
+      setTimeout(() => {
+        console.log('Auto-logout after password change for security');
+        logout();
+        
+        // Force redirect to login page
+        setTimeout(() => {
+          console.log('Redirecting to login page');
+          window.location.href = '/login';
+        }, 500);
+      }, 3000);
     } catch (error: any) {
+      console.error('Password change error:', error);
       setError(error.message || 'Failed to change password');
     } finally {
       setLoading(false);
@@ -130,8 +175,9 @@ export default function AccountsDialog({ open, onClose }: AccountsDialogProps) {
       return;
     }
 
-    if (newUserPassword.length < 8) {
-      setError('Password must be at least 8 characters long');
+    const passwordErrors = validatePassword(newUserPassword);
+    if (passwordErrors.length > 0) {
+      setError(passwordErrors.join('. '));
       return;
     }
 
@@ -303,7 +349,7 @@ export default function AccountsDialog({ open, onClose }: AccountsDialogProps) {
                 onChange={(e) => setNewPassword(e.target.value)}
                 fullWidth
                 size="small"
-                helperText="Password must be at least 8 characters long"
+                helperText="Must be at least 8 characters with uppercase, lowercase, and numbers"
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
@@ -340,6 +386,36 @@ export default function AccountsDialog({ open, onClose }: AccountsDialogProps) {
                   ),
                 }}
               />
+              
+              {newPassword && (
+                <Box>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Password Requirements:
+                  </Typography>
+                  <Stack spacing={0.5}>
+                    {[
+                      { text: 'At least 8 characters', valid: newPassword.length >= 8 },
+                      { text: 'Contains uppercase letter', valid: /[A-Z]/.test(newPassword) },
+                      { text: 'Contains lowercase letter', valid: /[a-z]/.test(newPassword) },
+                      { text: 'Contains number', valid: /[0-9]/.test(newPassword) },
+                      { text: 'Passwords match', valid: newPassword === confirmPassword && confirmPassword !== '' }
+                    ].map((req, index) => (
+                      <Typography
+                        key={index}
+                        variant="caption"
+                        sx={{
+                          color: req.valid ? 'success.main' : 'text.secondary',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 0.5
+                        }}
+                      >
+                        {req.valid ? '✓' : '○'} {req.text}
+                      </Typography>
+                    ))}
+                  </Stack>
+                </Box>
+              )}
             </Stack>
           )}
 
@@ -369,7 +445,7 @@ export default function AccountsDialog({ open, onClose }: AccountsDialogProps) {
                     onChange={(e) => setNewUserPassword(e.target.value)}
                     fullWidth
                     size="small"
-                    helperText="Password must be at least 8 characters long"
+                    helperText="Must be at least 8 characters with uppercase, lowercase, and numbers"
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">
@@ -384,6 +460,36 @@ export default function AccountsDialog({ open, onClose }: AccountsDialogProps) {
                       ),
                     }}
                   />
+                  
+                  {newUserPassword && (
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        Password Requirements:
+                      </Typography>
+                      <Stack spacing={0.5}>
+                        {[
+                          { text: 'At least 8 characters', valid: newUserPassword.length >= 8 },
+                          { text: 'Contains uppercase letter', valid: /[A-Z]/.test(newUserPassword) },
+                          { text: 'Contains lowercase letter', valid: /[a-z]/.test(newUserPassword) },
+                          { text: 'Contains number', valid: /[0-9]/.test(newUserPassword) }
+                        ].map((req, index) => (
+                          <Typography
+                            key={index}
+                            variant="caption"
+                            sx={{
+                              color: req.valid ? 'success.main' : 'text.secondary',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 0.5
+                            }}
+                          >
+                            {req.valid ? '✓' : '○'} {req.text}
+                          </Typography>
+                        ))}
+                      </Stack>
+                    </Box>
+                  )}
+                  
                   <Button
                     variant="contained"
                     onClick={handleCreateUser}

@@ -500,6 +500,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     console.log('Initial setup completed. User will now be redirected to login page.');
   };
 
+  // Development helper function to debug authentication state
+  const debugAuthState = () => {
+    console.log('=== Authentication Debug Info ===');
+    console.log('Current user:', user);
+    console.log('Is authenticated:', isAuthenticated);
+    
+    const usersData = safeLocalStorage.getItem(USERS_STORAGE_KEY);
+    const passwordsData = safeLocalStorage.getItem(PASSWORDS_STORAGE_KEY);
+    
+    if (usersData) {
+      const users = JSON.parse(usersData);
+      console.log('Stored users:', Object.keys(users).map(id => ({
+        id,
+        username: users[id].username,
+        isDefault: users[id].isDefault
+      })));
+    }
+    
+    if (passwordsData) {
+      const passwords = JSON.parse(passwordsData);
+      console.log('Password hashes:', Object.keys(passwords).map(id => ({
+        id,
+        hash: passwords[id]?.substring(0, 8) + '...'
+      })));
+    }
+    
+    const sessionData = safeSessionStorage.getItem(SESSION_STORAGE_KEY);
+    if (sessionData) {
+      console.log('Session data:', JSON.parse(sessionData));
+    }
+    
+    console.log('=== End Debug Info ===');
+  };
+
   // Development helper function to clear all cached data
   const clearStorageData = () => {
     // Clear all stored data to simulate first-time setup
@@ -520,7 +554,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     console.log('All storage data cleared - UI will behave as first-time setup');
   };
 
-  // Development keyboard shortcut to clear storage (Ctrl+Shift+C)
+  // Development keyboard shortcuts to clear storage and debug auth state
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.ctrlKey && event.shiftKey && event.key === 'C') {
@@ -528,6 +562,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           clearStorageData();
           window.location.reload();
         }
+      }
+      if (event.ctrlKey && event.shiftKey && event.key === 'D') {
+        debugAuthState();
       }
     };
 
@@ -537,23 +574,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const changePassword = async (oldPassword: string, newPassword: string): Promise<boolean> => {
     try {
-      if (!user) return false;
+      console.log('Changing password for user:', user?.username);
       
-      const passwordsData = safeLocalStorage.getItem(PASSWORDS_STORAGE_KEY);
-      if (!passwordsData) return false;
-      
-      const passwords = JSON.parse(passwordsData);
-      const oldPasswordHash = await hashPassword(oldPassword);
-      
-      if (passwords[user.id] !== oldPasswordHash) {
+      if (!user) {
+        console.error('No user logged in');
         return false;
       }
       
+      const passwordsData = safeLocalStorage.getItem(PASSWORDS_STORAGE_KEY);
+      if (!passwordsData) {
+        console.error('No passwords data found');
+        return false;
+      }
+      
+      const passwords = JSON.parse(passwordsData);
+      const oldPasswordHash = await hashPassword(oldPassword);
       const newPasswordHash = await hashPassword(newPassword);
+      
+      console.log('User ID:', user.id);
+      console.log('Stored password hash:', passwords[user.id]?.substring(0, 8) + '...');
+      console.log('Old password hash:', oldPasswordHash.substring(0, 8) + '...');
+      console.log('New password hash:', newPasswordHash.substring(0, 8) + '...');
+      
+      if (passwords[user.id] !== oldPasswordHash) {
+        console.error('Old password does not match stored password');
+        return false;
+      }
+      
+      // Update the password hash
       passwords[user.id] = newPasswordHash;
       
-      safeLocalStorage.setItem(PASSWORDS_STORAGE_KEY, JSON.stringify(passwords));
-      return true;
+      // Save the updated passwords
+      try {
+        safeLocalStorage.setItem(PASSWORDS_STORAGE_KEY, JSON.stringify(passwords));
+        console.log('Password updated successfully in storage');
+        
+        // Verify the password was actually saved
+        const verifyData = safeLocalStorage.getItem(PASSWORDS_STORAGE_KEY);
+        if (verifyData) {
+          const verifyPasswords = JSON.parse(verifyData);
+          if (verifyPasswords[user.id] === newPasswordHash) {
+            console.log('Password verification successful - new password saved correctly');
+            return true;
+          } else {
+            console.error('Password verification failed - password not saved correctly');
+            return false;
+          }
+        } else {
+          console.error('Could not retrieve passwords for verification');
+          return false;
+        }
+      } catch (storageError) {
+        console.error('Failed to save updated password:', storageError);
+        return false;
+      }
     } catch (error) {
       console.error('Error changing password:', error);
       return false;
