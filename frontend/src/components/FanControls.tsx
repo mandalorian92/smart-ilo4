@@ -31,13 +31,16 @@ import {
   Snackbar,
   useTheme,
   useMediaQuery,
-  IconButton
-} from "@mui/material";function FanControls({ onDebugLog }: { onDebugLog?: (message: string) => void }) {
+  IconButton,
+  Tooltip
+} from "@mui/material";
+import { Refresh as RefreshIcon } from "@mui/icons-material";function FanControls({ onDebugLog }: { onDebugLog?: (message: string) => void }) {
   const [fans, setFans] = useState<any[]>([]);
   const [fanSpeeds, setFanSpeeds] = useState<Record<string, number>>({});
   const [editAllMode, setEditAllMode] = useState(true);
   const [globalSpeed, setGlobalSpeed] = useState(25);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
   const [notification, setNotification] = useState<{
     open: boolean;
@@ -181,6 +184,23 @@ import {
     }
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    addDebugLog('Refreshing fan data...');
+    try {
+      await fetchFans(true); // Bust cache to get fresh data
+      showNotification('Fan data refreshed successfully', 'success');
+      addDebugLog('✓ Fan data refreshed successfully');
+    } catch (error) {
+      const errorMsg = (error as any).response?.data?.error || (error as Error).message;
+      addDebugLog(`✗ Refresh error: ${errorMsg}`);
+      console.error('Failed to refresh fan data:', error);
+      showNotification(`Failed to refresh fan data: ${errorMsg}`, 'error');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const fetchFans = async (bustCache = false, isAfterUpdate = false) => {
     try {
       // Add cache busting parameter when needed
@@ -244,12 +264,15 @@ import {
             fontSize: { xs: '1.5rem', sm: '2rem' },
             fontWeight: 600,
             mb: 0.5,
-            color: 'text.primary'
+            color: 'text.primary',
+            display: 'flex',
+            alignItems: 'center'
           }}
         >
           Fan Control System
           {loading && <CircularProgress size={24} sx={{ ml: 2 }} />}
         </Typography>
+        
         <Typography 
           variant="body1" 
           color="text.secondary"
@@ -415,23 +438,39 @@ import {
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'flex-end' }}>
-              <FormControlLabel
-                control={
-                  <Switch 
-                    checked={editAllMode} 
-                    onChange={(e) => setEditAllMode(e.target.checked)}
-                    size={isMobile ? "small" : "medium"}
-                  />
-                }
-                label={
-                  <Typography variant="body2" sx={{ 
-                    fontWeight: 500,
-                    fontSize: { xs: '0.8rem', sm: '0.875rem' }
-                  }}>
-                    Edit All
-                  </Typography>
-                }
-              />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Tooltip title="Refresh fan data">
+                  <IconButton
+                    onClick={handleRefresh}
+                    disabled={refreshing || loading}
+                    size="small"
+                    sx={{
+                      color: 'text.secondary',
+                      '&:hover': { color: 'primary.main' }
+                    }}
+                  >
+                    {refreshing ? <CircularProgress size={16} /> : <RefreshIcon fontSize="small" />}
+                  </IconButton>
+                </Tooltip>
+                
+                <FormControlLabel
+                  control={
+                    <Switch 
+                      checked={editAllMode} 
+                      onChange={(e) => setEditAllMode(e.target.checked)}
+                      size={isMobile ? "small" : "medium"}
+                    />
+                  }
+                  label={
+                    <Typography variant="body2" sx={{ 
+                      fontWeight: 500,
+                      fontSize: { xs: '0.8rem', sm: '0.875rem' }
+                    }}>
+                      Edit All
+                    </Typography>
+                  }
+                />
+              </Box>
             </Box>
           </Box>
           
