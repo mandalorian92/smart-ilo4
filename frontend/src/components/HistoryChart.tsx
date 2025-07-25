@@ -96,22 +96,54 @@ function HistoryChart() {
   // Function to categorize sensors
   const categorizeSensors = (sensors: SensorInfo[]) => {
     const systemSensors: SensorInfo[] = [];
+    const powerSupplySensors: SensorInfo[] = [];
     const peripheralSensors: SensorInfo[] = [];
 
     sensors.forEach(sensor => {
-      // Extract sensor number from name (e.g., "01-Inlet Ambient" -> 1)
-      const sensorNumberMatch = sensor.name.match(/^(\d+)-/);
-      const sensorNumber = sensorNumberMatch ? parseInt(sensorNumberMatch[1]) : null;
+      const sensorName = sensor.name.toLowerCase();
+      const sensorContext = sensor.context?.toLowerCase() || '';
       
-      // System sensors: sensors 01 to 17
-      if (sensorNumber && sensorNumber >= 1 && sensorNumber <= 17) {
+      // Power Supply sensors (check this first before other categorizations)
+      if (sensorName.includes('power') || 
+          sensorName.includes('psu') ||
+          sensorContext.includes('powersupply') ||
+          sensorContext.includes('power supply') ||
+          sensorName.includes('supply') ||
+          sensorName.includes('voltage') ||
+          sensorName.includes('regulator') ||
+          sensorName.includes('vrm') ||
+          sensorName.includes('vr ') ||
+          sensorName.startsWith('vr') ||
+          sensorContext.includes('voltage')) {
+        powerSupplySensors.push(sensor);
+      }
+      // System sensors: CPU, RAM, iLO, and Inlet Ambient sensors
+      else if (sensorName.includes('cpu') || 
+               sensorName.includes('inlet') || 
+               sensorName.includes('ambient') ||
+               sensorContext.includes('cpu') ||
+               sensorContext.includes('intake') ||
+               sensorName.includes('ilo') ||
+               sensorName.includes('ram') ||
+               sensorName.includes('memory')) {
         systemSensors.push(sensor);
-      } else {
-        peripheralSensors.push(sensor);
+      }
+      // Everything else goes to peripheral sensors
+      else {
+        // Extract sensor number from name (e.g., "01-Inlet Ambient" -> 1) for fallback categorization
+        const sensorNumberMatch = sensor.name.match(/^(\d+)-/);
+        const sensorNumber = sensorNumberMatch ? parseInt(sensorNumberMatch[1]) : null;
+        
+        // System sensors: sensors 01 to 17 (fallback for legacy categorization)
+        if (sensorNumber && sensorNumber >= 1 && sensorNumber <= 17) {
+          systemSensors.push(sensor);
+        } else {
+          peripheralSensors.push(sensor);
+        }
       }
     });
 
-    return { systemSensors, peripheralSensors };
+    return { systemSensors, powerSupplySensors, peripheralSensors };
   };
 
   useEffect(() => {
@@ -163,7 +195,7 @@ function HistoryChart() {
   }
 
   // Categorize sensors
-  const { systemSensors, peripheralSensors } = categorizeSensors(availableSensors);
+  const { systemSensors, powerSupplySensors, peripheralSensors } = categorizeSensors(availableSensors);
 
   // Prepare chart data labels with improved time formatting
   const labels = historyData.map(point => {
@@ -219,8 +251,8 @@ function HistoryChart() {
         }
       },
       tooltip: {
-        mode: 'index' as const,
-        intersect: false,
+        mode: 'nearest' as const,
+        intersect: true,
         titleFont: {
           size: isMobile ? 12 : 14
         },
@@ -228,6 +260,10 @@ function HistoryChart() {
           size: isMobile ? 11 : 13
         },
         callbacks: {
+          title: function(context: any) {
+            // Show the time for the hovered point
+            return context[0]?.label || '';
+          },
           label: function(context: any) {
             const sensorName = context.dataset.label;
             const value = context.parsed.y;
@@ -284,8 +320,8 @@ function HistoryChart() {
       }
     },
     interaction: {
-      mode: 'index' as const,
-      intersect: false,
+      mode: 'nearest' as const,
+      intersect: true,
     },
     elements: {
       point: {
@@ -299,6 +335,7 @@ function HistoryChart() {
   });
 
   const systemChartData = createChartData(systemSensors);
+  const powerSupplyChartData = createChartData(powerSupplySensors);
   const peripheralChartData = createChartData(peripheralSensors);
 
   const renderTemperatureCard = (
@@ -388,7 +425,8 @@ function HistoryChart() {
   return (
     <Box>
       {renderTemperatureCard("System Temperatures", systemChartData, systemSensors, true)}
-      {renderTemperatureCard("Peripherals Temperatures", peripheralChartData, peripheralSensors)}
+      {renderTemperatureCard("Power Supply Temperatures", powerSupplyChartData, powerSupplySensors)}
+      {renderTemperatureCard("Peripheral Temperatures", peripheralChartData, peripheralSensors)}
     </Box>
   );
 }
