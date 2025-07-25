@@ -32,7 +32,7 @@ import {
 } from '@mui/icons-material';
 import SystemLogo from './SystemLogo';
 import { useAuth } from '../context/AuthContext';
-import { saveILoConfig, testILoConnection, getILoStatus } from '../api';
+import { saveILoConfig, testILoConnection, getILoStatus, setupAdminPassword } from '../api';
 
 const steps = ['iLO Configuration', 'Admin Password', 'Complete'];
 
@@ -166,17 +166,57 @@ export default function InitialSetup() {
       
       setLoading(true);
       try {
-        // Update the default admin user password
-        await setupFirstUser('admin', adminPassword.newPassword);
+        console.log('Setting up admin password...');
+        
+        // Clear any existing session data to prevent conflicts
+        localStorage.removeItem('ilo_user_session');
+        sessionStorage.removeItem('ilo_user_session');
+        
+        let setupSuccess = false;
+        
+        // Try API-based setup first (if backend supports it)
+        try {
+          const apiResult = await setupAdminPassword('admin', adminPassword.newPassword, tempPassword);
+          if (apiResult.success) {
+            setupSuccess = true;
+            console.log('Admin password updated via API');
+          }
+        } catch (apiError) {
+          console.log('API setup not available, falling back to localStorage method');
+          
+          // Fall back to localStorage-based setup
+          setupSuccess = await setupFirstUser('admin', adminPassword.newPassword);
+          
+          if (setupSuccess) {
+            console.log('Admin password updated via localStorage');
+          }
+        }
+        
+        if (!setupSuccess) {
+          throw new Error('Failed to update admin password - both API and localStorage methods failed');
+        }
+        
+        console.log('Admin password updated successfully');
+        
+        // Clear the temporary password
+        localStorage.removeItem('temp_admin_password');
+        
         setActiveStep(2);
         setSuccess('Setup completed successfully! You will be logged out in a few seconds...');
         
-        // Auto logout after 3 seconds
+        // Auto logout after 3 seconds with proper cleanup
         setTimeout(() => {
+          console.log('Auto-logout after setup completion');
           logout();
+          
+          // Force a clean redirect to login page after a brief delay
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 500);
         }, 3000);
       } catch (error) {
-        setError('Failed to update admin password');
+        console.error('Setup error:', error);
+        setError(error instanceof Error ? error.message : 'Failed to update admin password');
       } finally {
         setLoading(false);
       }

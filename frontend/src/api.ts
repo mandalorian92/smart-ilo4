@@ -156,3 +156,7 @@ export interface AppConfig {
 export const getAppConfig = (): Promise<AppConfig> => get('/api/app/config');
 export const saveAppConfig = (config: AppConfig): Promise<void> => post('/api/app/config', config);
 export const restartServerWithConfig = (port?: number): Promise<void> => post('/api/app/restart', { port });
+
+// Auth API for admin setup
+export const setupAdminPassword = async (username: string, password: string, tempPassword?: string): Promise<{ success: boolean; message: string }> => 
+  post('/api/auth/setup-admin', { username, password, tempPassword });

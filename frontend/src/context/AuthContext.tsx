@@ -277,25 +277,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return false;
       }
       
-      setUser(updatedUser);
-      setIsAuthenticated(true);
+      // Clear any existing session data to ensure clean state
+      safeSessionStorage.removeItem(SESSION_STORAGE_KEY);
       
-      // Create session
-      try {
-        const sessionExpiry = Date.now() + (updatedUser.sessionTimeout * 60 * 1000);
-        safeSessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
-          userId: adminUserId,
-          username,
-          expiresAt: sessionExpiry
-        }));
-        console.log('Session created successfully');
-      } catch (sessionError) {
-        console.error('Failed to create session:', sessionError);
-        // Don't return false here as the user is still updated
-      }
-      
-      setTimeRemaining(updatedUser.sessionTimeout * 60);
-      console.log('First user setup completed successfully');
+      console.log('First user setup completed successfully - user must re-login with new credentials');
       return true;
     } catch (error) {
       console.error('Error setting up first user:', error);
@@ -421,6 +406,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userMatch = users[userId].username === username;
         const passwordMatch = passwords[userId] === passwordHash;
         console.log(`Checking user ${userId}: username match=${userMatch}, password match=${passwordMatch}`);
+        console.log(`  - Stored password hash: ${passwords[userId]?.substring(0, 8)}...`);
+        console.log(`  - Input password hash: ${passwordHash.substring(0, 8)}...`);
+        console.log(`  - User isDefault: ${users[userId].isDefault}`);
         return userMatch && passwordMatch;
       });
       
@@ -432,10 +420,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Security check: For default users, verify they're using the temporary password
         if (foundUser.isDefault) {
           const tempPassword = safeLocalStorage.getItem('temp_admin_password');
+          console.log('User is marked as default, checking temp password:', !!tempPassword);
           if (!tempPassword || password !== tempPassword) {
             console.log('Default user attempted login without valid temporary password - access denied');
             return false;
           }
+        } else {
+          console.log('User is not default, proceeding with normal authentication');
         }
         
         setUser(foundUser);
@@ -475,7 +466,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }));
         
         setTimeRemaining(foundUser.sessionTimeout * 60);
+        console.log('Login successful for user:', foundUser.username);
         return true;
+      } else {
+        console.log('Login failed: No matching user found');
+        console.log('Available users:', Object.keys(users).map(id => ({
+          id,
+          username: users[id].username,
+          isDefault: users[id].isDefault
+        })));
       }
       
       return false;
