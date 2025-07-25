@@ -1,0 +1,31 @@
+{
+  "version": "1.1.0",
+  "buildDate": "2025-07-25",
+  "changelog": [
+    {
+      "version": "1.1.0",
+      "date": "2025-07-25",
+      "type": "minor",
+      "changes": [
+        "Enhanced sensor categorization and chart rendering for power supply data",
+        "Fixed timeout issues for fan control operations",
+        "Performance optimizations: API caching, component memoization, callback optimization",
+        "Modern chart styling with improved tooltips and animations",
+        "Mobile-responsive design improvements"
+      ]
+    },
+    {
+      "version": "1.0.0",
+      "date": "2025-07-22",
+      "type": "major",
+      "changes": [
+        "Initial release with complete iLO4 integration",
+        "Fan control functionality",
+        "Temperature monitoring and history charts",
+        "User management and authentication",
+        "System health overview and data tables",
+        "Theme system and responsive design"
+      ]
+    }
+  ]
+}

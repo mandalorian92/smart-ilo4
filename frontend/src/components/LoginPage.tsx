@@ -17,6 +17,7 @@ import {
 import { Lock as LockIcon, Person as PersonIcon } from '@mui/icons-material';
 import SystemLogo from './SystemLogo';
 import { useAuth } from '../context/AuthContext';
+import { formatVersion, getVersionInfo } from '../utils/version';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -243,7 +244,16 @@ export default function LoginPage() {
             borderTop: `1px solid ${theme.palette.divider}`,
             textAlign: 'center'
           }}>
-            {/* Footer content removed */}
+            <Typography 
+              variant="body2" 
+              color="text.secondary"
+              sx={{ 
+                fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                fontWeight: 500
+              }}
+            >
+              {formatVersion(getVersionInfo().version)}
+            </Typography>
           </Box>
         </Paper>
       </Container>

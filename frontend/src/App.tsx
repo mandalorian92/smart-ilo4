@@ -39,6 +39,7 @@ import InitialSetup from "./components/InitialSetup";
 import SettingsDialog from "./components/SettingsDialog";
 import AccountsDialog from "./components/AccountsDialog";
 import SessionTimeoutWarning from "./components/SessionTimeoutWarning";
+import AppFooter from "./components/AppFooter";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -192,7 +193,12 @@ function AppContent() {
   const currentTab = tabs[tabValue];
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ 
+      minHeight: '100vh', 
+      bgcolor: 'background.default',
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
       {/* Session Timeout Warning */}
       <SessionTimeoutWarning />
       
@@ -334,7 +340,7 @@ function AppContent() {
       </AppBar>
       
       {/* Main Content Area */}
-      <Box component="main" role="main">
+      <Box component="main" role="main" sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {/* Responsive Container */}
         <Container 
           maxWidth={false}
@@ -342,6 +348,9 @@ function AppContent() {
             maxWidth: { xs: '100%', sm: '100%', md: 1200, lg: 1400 },
             pt: { xs: 2, sm: 3, md: 4 },
             px: { xs: 1, sm: 2, md: 3 },
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column'
           }}
         >
           {/* HPE Design System Style Navigation Tabs */}
@@ -393,7 +402,7 @@ function AppContent() {
           </Box>
 
           {/* Accessible Tab Content with Proper ARIA Labels - All content rendered for performance */}
-          <Box sx={{ minHeight: 'calc(100vh - 200px)' }}>
+          <Box sx={{ flex: 1 }}>
             <TabPanel value={tabValue} index={0}>
               <OverviewTabContent />
             </TabPanel>
@@ -412,6 +421,9 @@ function AppContent() {
           </Box>
         </Container>
       </Box>
+
+      {/* App Footer */}
+      <AppFooter />
     </Box>
   );
 }
@@ -420,7 +432,18 @@ function AuthenticatedApp() {
   const { isAuthenticated, isFirstTimeSetup, needsInitialSetup } = useAuth();
 
   if (isFirstTimeSetup) {
-    return <FirstTimeSetup />;
+    return (
+      <Box sx={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        flexDirection: 'column' 
+      }}>
+        <Box sx={{ flex: 1 }}>
+          <FirstTimeSetup />
+        </Box>
+        <AppFooter />
+      </Box>
+    );
   }
 
   if (!isAuthenticated) {
@@ -428,7 +451,18 @@ function AuthenticatedApp() {
   }
 
   if (needsInitialSetup) {
-    return <InitialSetup />;
+    return (
+      <Box sx={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        flexDirection: 'column' 
+      }}>
+        <Box sx={{ flex: 1 }}>
+          <InitialSetup />
+        </Box>
+        <AppFooter />
+      </Box>
+    );
   }
 
   return <AppContent />;
