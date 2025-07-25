@@ -14,6 +14,7 @@ export async function runIloCommand(command: string): Promise<string> {
       host: config.host,
       username: config.username,
       password: config.password,
+      readyTimeout: 20000, // 20 second timeout for SSH connection
       algorithms: { 
         kex: ["diffie-hellman-group14-sha1"],
         serverHostKey: ["ssh-rsa"],
@@ -21,7 +22,9 @@ export async function runIloCommand(command: string): Promise<string> {
         hmac: ["hmac-sha1"]
       },
     });
-    const { stdout, stderr } = await ssh.execCommand(command);
+    const { stdout, stderr } = await ssh.execCommand(command, {
+      execOptions: { timeout: 25000 } // 25 second timeout for command execution
+    });
     if (stderr) throw new Error(stderr);
     return stdout;
   } finally {

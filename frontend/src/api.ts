@@ -64,9 +64,10 @@ const get = async (endpoint: string, cacheKey?: string, ttl?: number) => {
   return res.data;
 };
 
-// Helper function for POST requests
-const post = async (endpoint: string, data?: any) => {
-  const res = await api.post(endpoint, data);
+// Helper function for POST requests with optional timeout override
+const post = async (endpoint: string, data?: any, timeout?: number) => {
+  const config = timeout ? { timeout } : {};
+  const res = await api.post(endpoint, data, config);
   return res.data;
 };
 
@@ -85,23 +86,23 @@ export const resetSensors = () => {
   return post('/sensors/reset');
 };
 
-// Fan API (with caching optimization)
+// Fan API (with caching optimization and extended timeouts for SSH operations)
 export const getFans = () => get('/fans', 'fans', CACHE_TTL.fans);
 export const overrideFan = (fanId: string, speed: number) => {
   invalidateCache(['fans']);
-  return post('/fans/override', { fanId, speed });
+  return post('/fans/override', { fanId, speed }, 30000); // 30 second timeout for fan operations
 };
 export const setAllFanSpeeds = (speed: number) => {
   invalidateCache(['fans']);
-  return post('/fans/set-all', { speed });
+  return post('/fans/set-all', { speed }, 30000); // 30 second timeout for fan operations
 };
 export const unlockFanControl = () => {
   invalidateCache(['fans']);
-  return post('/fans/unlock');
+  return post('/fans/unlock', undefined, 30000); // 30 second timeout for SSH operations
 };
 export const lockFanAtSpeed = (fanId: number, speed: number) => {
   invalidateCache(['fans']);
-  return post('/fans/lock', { fanId, speed });
+  return post('/fans/lock', { fanId, speed }, 30000); // 30 second timeout for fan operations
 };
 export const setPidLowLimit = (pidId: number, lowLimit: number) => 
   post('/fans/pid-low-limit', { pidId, lowLimit });
@@ -112,7 +113,7 @@ export const setSensorLowLimit = (sensorId: number, lowLimit: number) =>
   post('/sensors/set-low-limit', { sensorId, lowLimit });
 export const invalidateFanCache = () => {
   invalidateCache(['fans']);
-  return post('/fans/invalidate-cache');
+  return post('/fans/invalidate-cache', undefined, 15000); // 15 second timeout
 };
 
 // System Information API
