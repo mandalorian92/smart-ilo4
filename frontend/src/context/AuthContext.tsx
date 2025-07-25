@@ -12,7 +12,6 @@ interface User {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  isFirstTimeSetup: boolean;
   needsInitialSetup: boolean;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
@@ -96,43 +95,41 @@ const safeSessionStorage = {
   }
 };
 
-// Simple hash function with fallback for environments without crypto.subtle
+// Secure hash function using Web Crypto API - NO FALLBACK for security
 const hashPassword = async (password: string): Promise<string> => {
   const saltedPassword = password + 'ilo4_salt';
   
-  try {
-    // Try using Web Crypto API if available
-    if (crypto?.subtle) {
-      const encoder = new TextEncoder();
-      const data = encoder.encode(saltedPassword);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-  } catch (error) {
-    console.warn('Web Crypto API not available, using fallback hash');
+  if (!crypto?.subtle) {
+    throw new Error('Web Crypto API is required for secure password hashing');
   }
   
-  // Fallback hash function (simple but sufficient for this use case)
-  let hash = 0;
-  for (let i = 0; i < saltedPassword.length; i++) {
-    const char = saltedPassword.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32-bit integer
+  try {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(saltedPassword);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch (error) {
+    console.error('Password hashing failed:', error);
+    throw new Error('Failed to hash password securely');
   }
-  return Math.abs(hash).toString(16);
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isFirstTimeSetup, setIsFirstTimeSetup] = useState(false);
   const [needsInitialSetup, setNeedsInitialSetup] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(0);
 
   // Create default admin user if no users exist
   const createDefaultAdmin = async () => {
     console.log('Creating default admin user...');
+    
+    // Generate a more secure temporary password
+    const tempPassword = 'TempAdmin!' + Math.random().toString(36).substring(2, 8);
+    console.warn('🚨 SECURITY: Default admin created with temporary password:', tempPassword);
+    console.warn('🚨 This password MUST be changed during initial setup!');
+    
     const defaultUser: User = {
       id: 'admin',
       username: 'admin',
@@ -141,13 +138,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isDefault: true
     };
 
-    const passwordHash = await hashPassword('Changemen0w');
+    const passwordHash = await hashPassword(tempPassword);
     
     const users = { [defaultUser.id]: defaultUser };
     const passwords = { [defaultUser.id]: passwordHash };
     
     safeLocalStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
     safeLocalStorage.setItem(PASSWORDS_STORAGE_KEY, JSON.stringify(passwords));
+    
+    // Store the temporary password for initial setup (will be cleared after use)
+    safeLocalStorage.setItem('temp_admin_password', tempPassword);
     
     console.log('Default admin user created successfully');
     return defaultUser;
@@ -159,16 +159,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('Checking for existing users...');
       const usersData = safeLocalStorage.getItem(USERS_STORAGE_KEY);
       
+      // Always ensure default admin exists
       if (!usersData) {
         console.log('No existing users found, creating default admin...');
         await createDefaultAdmin();
-        setIsFirstTimeSetup(false); // No first-time setup needed since we have default admin
-      } else {
-        console.log('Existing users found');
-        setIsFirstTimeSetup(false);
       }
 
-      // Check for active session
+      // Check if initial setup is needed (iLO configuration)
+      try {
+        const iloStatus = await getILoStatus();
+        if (!iloStatus.configured) {
+          console.log('iLO not configured, requiring initial setup');
+          setNeedsInitialSetup(true);
+          return; // Skip session check if initial setup is needed
+        }
+        console.log('iLO already configured');
+        setNeedsInitialSetup(false);
+      } catch (error) {
+        console.error('Error checking iLO status:', error);
+        // If we can't check iLO status, assume initial setup is needed
+        setNeedsInitialSetup(true);
+        return;
+      }
+
+      // Check for active session only if initial setup is not needed
       const sessionData = safeSessionStorage.getItem(SESSION_STORAGE_KEY);
       if (sessionData && usersData) {
         try {
@@ -201,7 +215,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!isAuthenticated || timeRemaining <= 0) return;
 
     const timer = setInterval(() => {
-      setTimeRemaining(prev => {
+      setTimeRemaining((prev: number) => {
         if (prev <= 1) {
           logout();
           return 0;
@@ -253,6 +267,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         safeLocalStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
         safeLocalStorage.setItem(PASSWORDS_STORAGE_KEY, JSON.stringify(passwords));
+        
+        // Clear the temporary password - it's no longer needed
+        safeLocalStorage.removeItem('temp_admin_password');
+        
         console.log('Admin user updated successfully - password changed, default flag removed');
       } catch (storageError) {
         console.error('Failed to store updated user data:', storageError);
@@ -261,7 +279,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       setUser(updatedUser);
       setIsAuthenticated(true);
-      setIsFirstTimeSetup(false);
       
       // Create session
       try {
@@ -412,10 +429,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (foundUserId) {
         const foundUser = users[foundUserId];
         
-        // If user is no longer default but trying to use default password, deny access
-        if (!foundUser.isDefault && password === 'Changemen0w') {
-          console.log('Default password attempted on non-default user - access denied');
-          return false;
+        // Security check: For default users, verify they're using the temporary password
+        if (foundUser.isDefault) {
+          const tempPassword = safeLocalStorage.getItem('temp_admin_password');
+          if (!tempPassword || password !== tempPassword) {
+            console.log('Default user attempted login without valid temporary password - access denied');
+            return false;
+          }
         }
         
         setUser(foundUser);
@@ -429,8 +449,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (!iloStatus.configured) {
             setNeedsInitialSetup(true);
           } else {
-            // iLO is configured - only require setup if using default password on default user
-            if (foundUser.isDefault && password === 'Changemen0w') {
+            // iLO is configured - only require setup if user is still default
+            if (foundUser.isDefault) {
               setNeedsInitialSetup(true);
             } else {
               setNeedsInitialSetup(false);
@@ -438,8 +458,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         } catch (error) {
           console.error('Error checking iLO status:', error);
-          // If we can't check iLO status, only require setup for default password on default user
-          if (foundUser.isDefault && password === 'Changemen0w') {
+          // If we can't check iLO status, only require setup for default users
+          if (foundUser.isDefault) {
             setNeedsInitialSetup(true);
           } else {
             setNeedsInitialSetup(false);
@@ -475,7 +495,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const completeInitialSetup = () => {
     setNeedsInitialSetup(false);
+    
+    // After initial setup is complete, user should go to login page
+    // Do not automatically authenticate - let them login normally
+    console.log('Initial setup completed. User will now be redirected to login page.');
   };
+
+  // Development helper function to clear all cached data
+  const clearStorageData = () => {
+    // Clear all stored data to simulate first-time setup
+    safeLocalStorage.removeItem(USERS_STORAGE_KEY);
+    safeLocalStorage.removeItem(PASSWORDS_STORAGE_KEY);
+    safeLocalStorage.removeItem('temp_admin_password');
+    safeSessionStorage.removeItem(SESSION_STORAGE_KEY);
+    
+    // Also clear fallback storage
+    fallbackStorage.data.clear();
+    
+    // Reset state
+    setUser(null);
+    setIsAuthenticated(false);
+    setNeedsInitialSetup(true);
+    setTimeRemaining(0);
+    
+    console.log('All storage data cleared - UI will behave as first-time setup');
+  };
+
+  // Development keyboard shortcut to clear storage (Ctrl+Shift+C)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.shiftKey && event.key === 'C') {
+        if (confirm('Clear all cached data and reset to first-time setup?')) {
+          clearStorageData();
+          window.location.reload();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const changePassword = async (oldPassword: string, newPassword: string): Promise<boolean> => {
     try {
@@ -547,7 +606,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{
       user,
       isAuthenticated,
-      isFirstTimeSetup,
       needsInitialSetup,
       login,
       logout,

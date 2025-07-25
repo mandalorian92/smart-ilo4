@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -62,6 +62,7 @@ export default function InitialSetup() {
   const [showIloPassword, setShowIloPassword] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectionTested, setConnectionTested] = useState(false);
+  const [connectionError, setConnectionError] = useState('');
   
   // Admin Password state
   const [adminPassword, setAdminPassword] = useState<AdminPasswordData>({
@@ -70,10 +71,19 @@ export default function InitialSetup() {
   });
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [tempPassword, setTempPassword] = useState('');
   
-  const { setupFirstUser, logout, user } = useAuth();
+  const { setupFirstUser, logout } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  // Get the temporary password on component mount
+  useEffect(() => {
+    const tempPass = localStorage.getItem('temp_admin_password');
+    if (tempPass) {
+      setTempPassword(tempPass);
+    }
+  }, []);
 
   const validatePassword = (password: string): string[] => {
     const errors: string[] = [];
@@ -96,24 +106,25 @@ export default function InitialSetup() {
 
   const handleTestConnection = async () => {
     if (!iloConfig.host || !iloConfig.username || !iloConfig.password) {
-      setError('Please fill in all iLO configuration fields');
+      setConnectionError('Please fill in all iLO configuration fields');
       return;
     }
 
     setTestingConnection(true);
-    setError('');
+    setConnectionError('');
+    setConnectionTested(false);
     
     try {
       const result = await testILoConnection(iloConfig.host, iloConfig.username, iloConfig.password);
       if (result.success) {
-        setSuccess('Connection test successful!');
         setConnectionTested(true);
+        setConnectionError('');
       } else {
-        setError(`Connection failed: ${result.message}`);
+        setConnectionError(`Connection failed: ${result.message}`);
         setConnectionTested(false);
       }
     } catch (error) {
-      setError('Failed to test connection. Please check your network and credentials.');
+      setConnectionError('Failed to test connection. Please check your network and credentials.');
       setConnectionTested(false);
     } finally {
       setTestingConnection(false);
@@ -153,15 +164,10 @@ export default function InitialSetup() {
         return;
       }
       
-      if (!user) {
-        setError('No current user found');
-        return;
-      }
-      
       setLoading(true);
       try {
-        // Update the admin user password
-        await setupFirstUser(user.username, adminPassword.newPassword);
+        // Update the default admin user password
+        await setupFirstUser('admin', adminPassword.newPassword);
         setActiveStep(2);
         setSuccess('Setup completed successfully! You will be logged out in a few seconds...');
         
@@ -204,7 +210,11 @@ export default function InitialSetup() {
               label="iLO Host/IP Address"
               placeholder="192.168.1.100"
               value={iloConfig.host}
-              onChange={(e) => setIloConfig({ ...iloConfig, host: e.target.value })}
+              onChange={(e) => {
+                setIloConfig({ ...iloConfig, host: e.target.value });
+                setConnectionTested(false);
+                setConnectionError('');
+              }}
               fullWidth
               variant="outlined"
               helperText="Enter the IP address or hostname of your iLO interface"
@@ -214,7 +224,11 @@ export default function InitialSetup() {
               label="iLO Username"
               placeholder="Administrator"
               value={iloConfig.username}
-              onChange={(e) => setIloConfig({ ...iloConfig, username: e.target.value })}
+              onChange={(e) => {
+                setIloConfig({ ...iloConfig, username: e.target.value });
+                setConnectionTested(false);
+                setConnectionError('');
+              }}
               fullWidth
               variant="outlined"
               helperText="Username with administrative privileges on iLO"
@@ -224,7 +238,11 @@ export default function InitialSetup() {
               label="iLO Password"
               type={showIloPassword ? 'text' : 'password'}
               value={iloConfig.password}
-              onChange={(e) => setIloConfig({ ...iloConfig, password: e.target.value })}
+              onChange={(e) => {
+                setIloConfig({ ...iloConfig, password: e.target.value });
+                setConnectionTested(false);
+                setConnectionError('');
+              }}
               fullWidth
               variant="outlined"
               helperText="Password for the iLO administrator account"
@@ -257,6 +275,12 @@ export default function InitialSetup() {
                 iLO connection verified successfully!
               </Alert>
             )}
+
+            {connectionError && (
+              <Alert severity="error">
+                {connectionError}
+              </Alert>
+            )}
           </Stack>
         );
 
@@ -268,9 +292,25 @@ export default function InitialSetup() {
                 <SecurityIcon color="primary" />
                 Set Admin Password
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 Create a secure password for the admin account. You'll use this to log in after setup.
               </Typography>
+              
+              {tempPassword && (
+                <Alert severity="info" sx={{ mb: 3 }}>
+                  <Typography variant="body2" fontWeight="medium">
+                    Current temporary admin password: <code style={{ 
+                      backgroundColor: theme.palette.grey[100], 
+                      padding: '2px 6px', 
+                      borderRadius: '4px',
+                      fontFamily: 'monospace'
+                    }}>{tempPassword}</code>
+                  </Typography>
+                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                    This temporary password will be replaced with your new secure password.
+                  </Typography>
+                </Alert>
+              )}
             </Box>
 
             <TextField

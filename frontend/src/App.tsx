@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import { 
   Container, 
   Typography, 
@@ -34,7 +34,6 @@ import SystemHealthOverview from "./components/SystemHealthOverview";
 import SplashScreen from "./components/SplashScreen";
 import SystemLogo from "./components/SystemLogo";
 import LoginPage from "./components/LoginPage";
-import FirstTimeSetup from "./components/FirstTimeSetup";
 import InitialSetup from "./components/InitialSetup";
 import SettingsDialog from "./components/SettingsDialog";
 import AccountsDialog from "./components/AccountsDialog";
@@ -47,7 +46,7 @@ interface TabPanelProps {
   value: number;
 }
 
-const TabPanel = React.memo(function TabPanel(props: TabPanelProps) {
+const TabPanel = React.memo<TabPanelProps>(function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
 
   // Always render children but control visibility with CSS
@@ -70,74 +69,90 @@ const TabPanel = React.memo(function TabPanel(props: TabPanelProps) {
 });
 
 // Memoized tab content components to prevent unnecessary re-renders
-const OverviewTabContent = React.memo(() => (
-  <Box 
-    role="tabpanel"
-    aria-labelledby="tab-0"
-    aria-describedby="tab-desc-0"
-  >
-    <div id="tab-desc-0" className="sr-only">
-      System overview showing system information and temperature history
-    </div>
-    
-    {/* Top Cards Section */}
-    <Box sx={{ mb: 4 }}>
-      <Grid container spacing={{ xs: 2, sm: 3 }}>
-        {/* Information Card - First on mobile, left side on desktop */}
-        <Grid item xs={12} md={6} lg={4}>
-          <InformationCard />
+const OverviewTabContent = React.memo<{}>(function OverviewTabContent() {
+  return (
+    <Box 
+      role="tabpanel"
+      aria-labelledby="tab-0"
+      aria-describedby="tab-desc-0"
+    >
+      <div id="tab-desc-0" className="sr-only">
+        System overview showing system information and temperature history
+      </div>
+      
+      {/* Top Cards Section */}
+      <Box sx={{ mb: 4 }}>
+        <Grid container spacing={{ xs: 2, sm: 3 }}>
+          {/* Information Card - First on mobile, left side on desktop */}
+          <Grid item xs={12} md={6} lg={4}>
+            <InformationCard />
+          </Grid>
+          
+          {/* System Health Overview Card - Second on mobile, right side on desktop */}
+          <Grid item xs={12} md={6} lg={8}>
+            <SystemHealthOverview />
+          </Grid>
         </Grid>
-        
-        {/* System Health Overview Card - Second on mobile, right side on desktop */}
-        <Grid item xs={12} md={6} lg={8}>
-          <SystemHealthOverview />
-        </Grid>
-      </Grid>
+      </Box>
+      
+      {/* Temperature History Chart */}
+      <HistoryChart />
     </Box>
-    
-    {/* Temperature History Chart */}
-    <HistoryChart />
-  </Box>
-));
+  );
+});
 
-const MonitoringTabContent = React.memo(() => (
-  <Box 
-    role="tabpanel"
-    aria-labelledby="tab-1"
-    aria-describedby="tab-desc-1"
-  >
-    <div id="tab-desc-1" className="sr-only">
-      Real-time monitoring dashboard with sensor data and system health
-    </div>
-    <Dashboard />
-  </Box>
-));
+const MonitoringTabContent = React.memo<{}>(function MonitoringTabContent() {
+  return (
+    <Box 
+      role="tabpanel"
+      aria-labelledby="tab-1"
+      aria-describedby="tab-desc-1"
+    >
+      <div id="tab-desc-1" className="sr-only">
+        Real-time monitoring dashboard with sensor data and system health
+      </div>
+      <Dashboard />
+    </Box>
+  );
+});
 
-const ControlTabContent = React.memo<{ onDebugLog: (message: string) => void }>(({ onDebugLog }) => (
-  <Box 
-    role="tabpanel"
-    aria-labelledby="tab-2"
-    aria-describedby="tab-desc-2"
-  >
-    <div id="tab-desc-2" className="sr-only">
-      Fan speed control and system configuration options
-    </div>
-    <FanControls onDebugLog={onDebugLog} />
-  </Box>
-));
+interface ControlTabContentProps {
+  onDebugLog: (message: string) => void;
+}
 
-const DebugTabContent = React.memo<{ debugLogs: string[] }>(({ debugLogs }) => (
-  <Box 
-    role="tabpanel"
-    aria-labelledby="tab-3"
-    aria-describedby="tab-desc-3"
-  >
-    <div id="tab-desc-3" className="sr-only">
-      Debug terminal showing system logs and diagnostic information
-    </div>
-    <DebugTerminal debugLogs={debugLogs} />
-  </Box>
-));
+const ControlTabContent = React.memo<ControlTabContentProps>(function ControlTabContent({ onDebugLog }) {
+  return (
+    <Box 
+      role="tabpanel"
+      aria-labelledby="tab-2"
+      aria-describedby="tab-desc-2"
+    >
+      <div id="tab-desc-2" className="sr-only">
+        Fan speed control and system configuration options
+      </div>
+      <FanControls onDebugLog={onDebugLog} />
+    </Box>
+  );
+});
+
+interface DebugTabContentProps {
+  debugLogs: string[];
+}
+
+const DebugTabContent = React.memo<DebugTabContentProps>(function DebugTabContent({ debugLogs }) {
+  return (
+    <Box 
+      role="tabpanel"
+      aria-labelledby="tab-3"
+      aria-describedby="tab-desc-3"
+    >
+      <div id="tab-desc-3" className="sr-only">
+        Debug terminal showing system logs and diagnostic information
+      </div>
+      <DebugTerminal debugLogs={debugLogs} />
+    </Box>
+  );
+});
 
 function a11yProps(index: number) {
   return {
@@ -157,12 +172,12 @@ function AppContent() {
   
   const { user } = useAuth();
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (event: React.SyntheticEvent<Element, Event>, newValue: number) => {
     setTabValue(newValue);
   };
 
   const handleDebugLog = (message: string) => {
-    setDebugLogs(prev => [...prev, message].slice(-20)); // Keep last 20 logs
+    setDebugLogs((prev: string[]) => [...prev, message].slice(-20)); // Keep last 20 logs
   };
 
   // Define tab configuration following design guidelines
@@ -429,27 +444,9 @@ function AppContent() {
 }
 
 function AuthenticatedApp() {
-  const { isAuthenticated, isFirstTimeSetup, needsInitialSetup } = useAuth();
+  const { isAuthenticated, needsInitialSetup } = useAuth();
 
-  if (isFirstTimeSetup) {
-    return (
-      <Box sx={{ 
-        minHeight: '100vh', 
-        display: 'flex', 
-        flexDirection: 'column' 
-      }}>
-        <Box sx={{ flex: 1 }}>
-          <FirstTimeSetup />
-        </Box>
-        <AppFooter />
-      </Box>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <LoginPage />;
-  }
-
+  // Prioritize initial setup over login - if iLO needs configuration, show initial setup
   if (needsInitialSetup) {
     return (
       <Box sx={{ 
@@ -463,6 +460,10 @@ function AuthenticatedApp() {
         <AppFooter />
       </Box>
     );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginPage />;
   }
 
   return <AppContent />;
