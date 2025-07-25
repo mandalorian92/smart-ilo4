@@ -10,9 +10,57 @@ const api = axios.create({
   timeout: 10000,
 });
 
-// Helper function for GET requests
-const get = async (endpoint: string) => {
+// Simple cache implementation for performance optimization
+const cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
+
+const CACHE_TTL = {
+  sensors: 30000,      // 30 seconds
+  fans: 30000,         // 30 seconds
+  systemInfo: 300000,  // 5 minutes
+  history: 60000       // 1 minute
+};
+
+function getCachedData(key: string): any | null {
+  const cached = cache.get(key);
+  if (cached && Date.now() - cached.timestamp < cached.ttl) {
+    return cached.data;
+  }
+  cache.delete(key);
+  return null;
+}
+
+function setCachedData(key: string, data: any, ttl: number): void {
+  cache.set(key, {
+    data,
+    timestamp: Date.now(),
+    ttl
+  });
+}
+
+// Cache invalidation function
+export const invalidateCache = (keys?: string[]): void => {
+  if (keys) {
+    keys.forEach(key => cache.delete(key));
+  } else {
+    cache.clear();
+  }
+};
+
+// Helper function for GET requests with caching
+const get = async (endpoint: string, cacheKey?: string, ttl?: number) => {
+  if (cacheKey && ttl) {
+    const cached = getCachedData(cacheKey);
+    if (cached) {
+      return cached;
+    }
+  }
+  
   const res = await api.get(endpoint);
+  
+  if (cacheKey && ttl) {
+    setCachedData(cacheKey, res.data, ttl);
+  }
+  
   return res.data;
 };
 
@@ -22,24 +70,39 @@ const post = async (endpoint: string, data?: any) => {
   return res.data;
 };
 
-// Sensor API
-export const getSensors = () => get('/sensors');
+// Sensor API (with caching optimization)
+export const getSensors = () => get('/sensors', 'sensors', CACHE_TTL.sensors);
 export const getAvailableSensors = () => get('/sensors/available');
 export const getActivePids = () => get('/sensors/active-pids');
 export const getAllPids = () => get('/sensors/pids');
-export const getHistory = () => get('/sensors/history');
-export const overrideSensor = (sensorId: string, value: number) => 
-  post('/sensors/override', { sensorId, value });
-export const resetSensors = () => post('/sensors/reset');
+export const getHistory = () => get('/sensors/history', 'history', CACHE_TTL.history);
+export const overrideSensor = (sensorId: string, value: number) => {
+  invalidateCache(['sensors']);
+  return post('/sensors/override', { sensorId, value });
+};
+export const resetSensors = () => {
+  invalidateCache(['sensors']);
+  return post('/sensors/reset');
+};
 
-// Fan API
-export const getFans = () => get('/fans');
-export const overrideFan = (fanId: string, speed: number) => 
-  post('/fans/override', { fanId, speed });
-export const setAllFanSpeeds = (speed: number) => post('/fans/set-all', { speed });
-export const unlockFanControl = () => post('/fans/unlock');
-export const lockFanAtSpeed = (fanId: number, speed: number) => 
-  post('/fans/lock', { fanId, speed });
+// Fan API (with caching optimization)
+export const getFans = () => get('/fans', 'fans', CACHE_TTL.fans);
+export const overrideFan = (fanId: string, speed: number) => {
+  invalidateCache(['fans']);
+  return post('/fans/override', { fanId, speed });
+};
+export const setAllFanSpeeds = (speed: number) => {
+  invalidateCache(['fans']);
+  return post('/fans/set-all', { speed });
+};
+export const unlockFanControl = () => {
+  invalidateCache(['fans']);
+  return post('/fans/unlock');
+};
+export const lockFanAtSpeed = (fanId: number, speed: number) => {
+  invalidateCache(['fans']);
+  return post('/fans/lock', { fanId, speed });
+};
 export const setPidLowLimit = (pidId: number, lowLimit: number) => 
   post('/fans/pid-low-limit', { pidId, lowLimit });
 export const getFanInfo = () => get('/fans/info');
@@ -47,7 +110,10 @@ export const getFanPidInfo = () => get('/fans/pid-info');
 export const getFanGroupInfo = () => get('/fans/group-info');
 export const setSensorLowLimit = (sensorId: number, lowLimit: number) => 
   post('/sensors/set-low-limit', { sensorId, lowLimit });
-export const invalidateFanCache = () => post('/fans/invalidate-cache');
+export const invalidateFanCache = () => {
+  invalidateCache(['fans']);
+  return post('/fans/invalidate-cache');
+};
 
 // System Information API
 export interface SystemInformation {
@@ -58,8 +124,12 @@ export interface SystemInformation {
   iloFirmware: string;
 }
 
-export const getSystemInformation = (): Promise<SystemInformation> => get('/api/system/info');
-export const refreshSystemInformation = (): Promise<SystemInformation> => post('/api/system/info/refresh');
+export const getSystemInformation = (): Promise<SystemInformation> => 
+  get('/api/system/info', 'systemInfo', CACHE_TTL.systemInfo);
+export const refreshSystemInformation = (): Promise<SystemInformation> => {
+  invalidateCache(['systemInfo']);
+  return post('/api/system/info/refresh');
+};
 
 // iLO Configuration API
 export interface ILoConfig {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { getSensors, getFans } from "../api";
 import { 
   Card, 
@@ -30,17 +30,8 @@ import ClearIcon from '@mui/icons-material/Clear';
 import { searchInRow } from '../utils/searchUtils';
 import DataTable, { StatusIndicator, ProgressBar } from './DataTable';
 
-// Circular progress component for gauges
-function CircularGauge({ 
-  value, 
-  maxValue, 
-  size = 120, 
-  thickness = 8, 
-  color, 
-  label, 
-  unit,
-  showValue = true 
-}: {
+// Circular progress component for gauges (memoized for performance)
+const CircularGauge = React.memo((props: {
   value: number;
   maxValue: number;
   size?: number;
@@ -49,7 +40,17 @@ function CircularGauge({
   label: string;
   unit: string;
   showValue?: boolean;
-}) {
+}) => {
+  const { 
+    value, 
+    maxValue, 
+    size = 120, 
+    thickness = 8, 
+    color, 
+    label, 
+    unit,
+    showValue = true 
+  } = props;
   const percentage = Math.min((value / maxValue) * 100, 100);
   const theme = useTheme();
   
@@ -122,40 +123,42 @@ function CircularGauge({
       </Box>
     </Box>
   );
-}
+});
 
-// Temperature card component following design guidelines
-function TemperatureCard({ 
-  sensor, 
-  showFahrenheit 
-}: { 
+// Temperature card component following design guidelines (memoized for performance)
+const TemperatureCard = React.memo((props: { 
   sensor: any; 
   showFahrenheit: boolean;
-}) {
+}) => {
+  const { sensor, showFahrenheit } = props;
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
-  const convertTemperature = (celsius: number) => {
-    return showFahrenheit ? Math.round((celsius * 9/5) + 32) : celsius;
-  };
-  
+  // Memoize temperature calculations to prevent recalculation on every render
+  const tempData = useMemo(() => {
+    const convertTemperature = (celsius: number) => {
+      return showFahrenheit ? Math.round((celsius * 9/5) + 32) : celsius;
+    };
+    
+    const reading = convertTemperature(sensor.reading);
+    const critical = sensor.critical ? convertTemperature(sensor.critical) : 100;
+    const maxTemp = showFahrenheit ? 200 : 100;
+    
+    let status: 'ok' | 'warning' | 'error' = 'ok';
+    let gaugeColor = theme.palette.success.main;
+    
+    if (sensor.critical && reading >= critical) {
+      status = 'error';
+      gaugeColor = theme.palette.error.main;
+    } else if (sensor.critical && reading >= (critical - (showFahrenheit ? 27 : 15))) {
+      status = 'warning';
+      gaugeColor = theme.palette.warning.main;
+    }
+    
+    return { reading, critical, maxTemp, status, gaugeColor };
+  }, [sensor.reading, sensor.critical, showFahrenheit, theme.palette]);
+
   const getTemperatureUnit = () => showFahrenheit ? '°F' : '°C';
-  
-  const reading = convertTemperature(sensor.reading);
-  const critical = sensor.critical ? convertTemperature(sensor.critical) : 100;
-  const maxTemp = showFahrenheit ? 200 : 100;
-  
-  // Determine status and color
-  let status: 'ok' | 'warning' | 'error' = 'ok';
-  let gaugeColor = theme.palette.success.main;
-  
-  if (sensor.critical && reading >= critical) {
-    status = 'error';
-    gaugeColor = theme.palette.error.main;
-  } else if (sensor.critical && reading >= (critical - (showFahrenheit ? 27 : 15))) {
-    status = 'warning';  
-    gaugeColor = theme.palette.warning.main;
-  }
   
   return (
     <Card 
@@ -216,7 +219,7 @@ function TemperatureCard({
             gap: 1,
             flexShrink: 0
           }}>
-            <StatusIndicator status={status} size="medium" />
+            <StatusIndicator status={tempData.status} size="medium" />
           </Box>
         </Box>
         
@@ -229,11 +232,11 @@ function TemperatureCard({
           py: 2
         }}>
           <CircularGauge
-            value={reading}
-            maxValue={maxTemp}
+            value={tempData.reading}
+            maxValue={tempData.maxTemp}
             size={isMobile ? 100 : 120}
             thickness={8}
-            color={gaugeColor}
+            color={tempData.gaugeColor}
             label="Current"
             unit={getTemperatureUnit()}
           />
@@ -269,36 +272,41 @@ function TemperatureCard({
                 fontSize: '0.875rem'
               }}
             >
-              {convertTemperature(sensor.critical)}{getTemperatureUnit()}
+              {tempData.critical}{getTemperatureUnit()}
             </Typography>
           </Box>
         )}
       </CardContent>
     </Card>
   );
-}
+});
 
-// Fan card component following design guidelines  
-function FanCard({ fan }: { fan: any }) {
+// Fan card component following design guidelines (memoized for performance)
+const FanCard = React.memo((props: { fan: any }) => {
+  const { fan } = props;
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
-  // Determine status and color
-  let status: 'ok' | 'warning' | 'error' | 'offline' = 'ok';
-  let gaugeColor = theme.palette.success.main;
-  
-  if (fan.status === 'Absent') {
-    status = 'offline';
-    gaugeColor = theme.palette.text.disabled;
-  } else if (fan.health !== 'OK' || fan.status !== 'Enabled') {
-    status = 'warning';
-    gaugeColor = theme.palette.warning.main;
-  } else if (fan.speed >= 85) {
-    status = 'warning';
-    gaugeColor = theme.palette.warning.main;
-  }
-  
-  const rpm = Math.round((fan.speed / 100) * 6000); // Estimated RPM
+  // Memoize fan calculations to prevent recalculation on every render
+  const fanData = useMemo(() => {
+    let status: 'ok' | 'warning' | 'error' | 'offline' = 'ok';
+    let gaugeColor = theme.palette.success.main;
+    
+    if (fan.status === 'Absent') {
+      status = 'offline';
+      gaugeColor = theme.palette.text.disabled;
+    } else if (fan.health !== 'OK' || fan.status !== 'Enabled') {
+      status = 'warning';
+      gaugeColor = theme.palette.warning.main;
+    } else if (fan.speed >= 85) {
+      status = 'warning';
+      gaugeColor = theme.palette.warning.main;
+    }
+    
+    const rpm = Math.round((fan.speed / 100) * 6000); // Estimated RPM
+    
+    return { status, gaugeColor, rpm };
+  }, [fan.speed, fan.health, fan.status, theme.palette]);
   
   return (
     <Card 
@@ -355,7 +363,7 @@ function FanCard({ fan }: { fan: any }) {
             gap: 1,
             flexShrink: 0
           }}>
-            <StatusIndicator status={status} size="medium" />
+            <StatusIndicator status={fanData.status} size="medium" />
           </Box>
         </Box>
         
@@ -372,7 +380,7 @@ function FanCard({ fan }: { fan: any }) {
             maxValue={100}
             size={isMobile ? 100 : 120}
             thickness={8}
-            color={gaugeColor}
+            color={fanData.gaugeColor}
             label="Speed"
             unit="%"
           />
@@ -407,13 +415,13 @@ function FanCard({ fan }: { fan: any }) {
               fontSize: '0.875rem'
             }}
           >
-            {rpm.toLocaleString()}
+            {fanData.rpm.toLocaleString()}
           </Typography>
         </Box>
       </CardContent>
     </Card>
   );
-}
+});
 
 function Dashboard() {
   const [sensors, setSensors] = useState<any[]>([]);
@@ -426,7 +434,8 @@ function Dashboard() {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
 
-  const fetchData = async () => {
+  // Memoize the fetch function to prevent unnecessary recreations
+  const fetchData = useCallback(async () => {
     try {
       const [sensorsData, fansData] = await Promise.all([getSensors(), getFans()]);
       setSensors(sensorsData);
@@ -437,7 +446,7 @@ function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -446,30 +455,44 @@ function Dashboard() {
       fetchData();
     }, 5000); // Update every 5 seconds for faster updates
     return () => clearInterval(interval);
+  }, [fetchData]);
+
+  const convertTemperature = useCallback((celsius: number) => {
+    return showFahrenheit ? Math.round((celsius * 9/5) + 32) : celsius;
+  }, [showFahrenheit]);
+
+  const getTemperatureUnit = useCallback(() => showFahrenheit ? '°F' : '°C', [showFahrenheit]);
+
+  // Memoize filtered data to prevent recalculation on every render
+  const filteredData = useMemo(() => {
+    const filteredFans = searchQuery.trim() 
+      ? fans.filter(row => searchInRow(row, searchQuery, [{ id: 'name' }, { id: 'status' }, { id: 'health' }, { id: 'speed' }]))
+      : fans;
+      
+    const filteredSensors = searchQuery.trim()
+      ? sensors.filter(sensor => sensor.reading > 0).filter(row => searchInRow(row, searchQuery, [{ id: 'name' }, { id: 'context' }, { id: 'reading' }, { id: 'critical' }]))
+      : sensors.filter(sensor => sensor.reading > 0);
+      
+    return { filteredFans, filteredSensors };
+  }, [fans, sensors, searchQuery]);
+
+  // Memoize event handlers
+  const handleSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(event.target.value);
   }, []);
 
-  const convertTemperature = (celsius: number) => {
-    return showFahrenheit ? Math.round((celsius * 9/5) + 32) : celsius;
-  };
+  const handleSearchClear = useCallback(() => {
+    setSearchQuery('');
+  }, []);
 
-  const getTemperatureUnit = () => showFahrenheit ? '°F' : '°C';
+  const handleRefresh = useCallback(() => {
+    setLoading(true);
+    fetchData();
+  }, [fetchData]);
 
-  // Filter data based on search query
-  const filteredFans = useMemo(() => {
-    if (!searchQuery.trim()) return fans;
-    const fanColumns = [
-      { id: 'name' }, { id: 'status' }, { id: 'health' }, { id: 'speed' }
-    ];
-    return fans.filter(row => searchInRow(row, searchQuery, fanColumns));
-  }, [fans, searchQuery]);
-
-  const filteredSensors = useMemo(() => {
-    if (!searchQuery.trim()) return sensors.filter(sensor => sensor.reading > 0);
-    const sensorColumns = [
-      { id: 'name' }, { id: 'context' }, { id: 'reading' }, { id: 'critical' }
-    ];
-    return sensors.filter(sensor => sensor.reading > 0).filter(row => searchInRow(row, searchQuery, sensorColumns));
-  }, [sensors, searchQuery]);
+  const handleTemperatureUnitToggle = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setShowFahrenheit(event.target.checked);
+  }, []);
 
   const clearSearch = () => {
     setSearchQuery('');
@@ -538,7 +561,7 @@ function Dashboard() {
             <Tooltip title="Refresh data">
               <IconButton 
                 size="small" 
-                onClick={fetchData}
+                onClick={handleRefresh}
                 sx={{ ml: 1 }}
               >
                 <RefreshIcon fontSize="small" />
@@ -551,7 +574,7 @@ function Dashboard() {
           control={
             <Switch 
               checked={showFahrenheit} 
-              onChange={(e) => setShowFahrenheit(e.target.checked)}
+              onChange={handleTemperatureUnitToggle}
               size={isMobile ? "small" : "medium"}
             />
           }
@@ -576,7 +599,7 @@ function Dashboard() {
             size="small"
             placeholder="Search"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={handleSearchChange}
             aria-label="search"
             sx={{
               width: '100%',
@@ -626,7 +649,7 @@ function Dashboard() {
                   {searchQuery ? (
                     <IconButton
                       size="small"
-                      onClick={clearSearch}
+                      onClick={handleSearchClear}
                       aria-label="clear search"
                       sx={{ 
                         padding: '2px',
@@ -735,7 +758,7 @@ function Dashboard() {
             )
           }
         ]}
-        data={filteredFans}
+        data={filteredData.filteredFans}
         emptyMessage={searchQuery ? `No fan controllers found for "${searchQuery}"` : "No fan controllers detected"}
       />
 
@@ -850,7 +873,7 @@ function Dashboard() {
             )
           }
         ]}
-        data={filteredSensors}
+        data={filteredData.filteredSensors}
         emptyMessage={searchQuery ? `No temperature sensors found for "${searchQuery}"` : "No temperature sensors detected"}
       />
     </Box>
