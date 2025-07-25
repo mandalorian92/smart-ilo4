@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getILoConfig, saveILoConfig, testILoConnection, isILoConfigured, clearILoConfig } from '../services/config.js';
+import { getSystemInformation } from '../services/systemInfo.js';
 
 const router = Router();
 
@@ -33,6 +34,17 @@ router.post('/config', async (req, res) => {
 
     const config = { host, username, password };
     await saveILoConfig(config);
+    
+    // Initialize system information cache after successful iLO configuration
+    console.log('iLO configuration saved, initializing system information cache...');
+    setTimeout(async () => {
+      try {
+        await getSystemInformation();
+        console.log('System information cache initialized successfully after iLO configuration');
+      } catch (error) {
+        console.error('Failed to initialize system information cache after iLO configuration:', error);
+      }
+    }, 1000); // Small delay to ensure configuration is fully persisted
     
     res.json({ success: true, message: 'iLO configuration saved successfully' });
   } catch (error) {

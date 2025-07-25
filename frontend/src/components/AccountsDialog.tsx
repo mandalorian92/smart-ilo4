@@ -426,8 +426,8 @@ export default function AccountsDialog({ open, onClose }: AccountsDialogProps) {
               </Typography>
               
               {/* Add New User Section */}
-              <Paper sx={{ p: 3, border: `1px solid ${theme.palette.divider}` }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+              <Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
                   Add New User
                 </Typography>
                 <Stack spacing={2}>
@@ -437,6 +437,7 @@ export default function AccountsDialog({ open, onClose }: AccountsDialogProps) {
                     onChange={(e) => setNewUsername(e.target.value)}
                     fullWidth
                     size="small"
+                    helperText="Enter a unique username for the new user"
                   />
                   <TextField
                     label="Password"
@@ -489,60 +490,90 @@ export default function AccountsDialog({ open, onClose }: AccountsDialogProps) {
                       </Stack>
                     </Box>
                   )}
-                  
-                  <Button
-                    variant="contained"
-                    onClick={handleCreateUser}
-                    disabled={loading}
-                    startIcon={loading ? <CircularProgress size={20} /> : <AddIcon />}
-                    sx={{ alignSelf: 'flex-start' }}
-                  >
-                    Create User
-                  </Button>
                 </Stack>
-              </Paper>
+              </Box>
+
+              <Divider />
 
               {/* Users List */}
-              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                Existing Users
-              </Typography>
-              
-              <TableContainer component={Paper} sx={{ border: `1px solid ${theme.palette.divider}` }}>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 600 }}>Username</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }} align="center">Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {users.map((userItem) => (
-                      <TableRow key={userItem.username}>
-                        <TableCell>{userItem.username}</TableCell>
-                        <TableCell>
-                          <Chip 
-                            label={userItem.username === user?.username ? 'Current User' : 'Active'} 
-                            size="small" 
-                            color={userItem.username === user?.username ? 'primary' : 'success'}
-                            variant="outlined"
-                          />
-                        </TableCell>
-                        <TableCell align="center">
-                          <IconButton
-                            onClick={() => handleDeleteUser(userItem.username)}
-                            disabled={userItem.username === user?.username || loading}
-                            size="small"
-                            color="error"
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </TableCell>
+              <Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
+                  Existing Users
+                </Typography>
+                
+                <TableContainer 
+                  component={Paper} 
+                  elevation={0}
+                  sx={{ 
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: 2
+                  }}
+                >
+                  <Table>
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: 'grey.50' }}>
+                        <TableCell sx={{ fontWeight: 600, color: 'text.primary' }}>Username</TableCell>
+                        <TableCell sx={{ fontWeight: 600, color: 'text.primary' }}>Status</TableCell>
+                        <TableCell sx={{ fontWeight: 600, color: 'text.primary' }} align="center">Actions</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                    </TableHead>
+                    <TableBody>
+                      {users.map((userItem) => (
+                        <TableRow 
+                          key={userItem.username}
+                          sx={{ 
+                            '&:hover': { bgcolor: 'grey.50' },
+                            '&:last-child td': { borderBottom: 0 }
+                          }}
+                        >
+                          <TableCell sx={{ color: 'text.primary' }}>
+                            {userItem.username}
+                            {userItem.isDefault && (
+                              <Chip 
+                                label="Admin" 
+                                size="small" 
+                                color="primary" 
+                                variant="outlined"
+                                sx={{ ml: 1 }}
+                              />
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={userItem.username === user?.username ? 'Current User' : 'Active'} 
+                              size="small" 
+                              color={userItem.username === user?.username ? 'primary' : 'success'}
+                              variant="outlined"
+                            />
+                          </TableCell>
+                          <TableCell align="center">
+                            <IconButton
+                              onClick={() => handleDeleteUser(userItem.username)}
+                              disabled={userItem.username === user?.username || userItem.isDefault || loading}
+                              size="small"
+                              color="error"
+                              sx={{
+                                '&.Mui-disabled': {
+                                  color: 'grey.400'
+                                }
+                              }}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {users.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={3} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                            No users found
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
             </Stack>
           )}
         </Box>
@@ -564,6 +595,15 @@ export default function AccountsDialog({ open, onClose }: AccountsDialogProps) {
             startIcon={loading ? <CircularProgress size={20} /> : <LockIcon />}
           >
             {loading ? 'Changing...' : 'Change Password'}
+          </Button>
+        ) : activeTab === 'users' ? (
+          <Button
+            variant="contained"
+            onClick={handleCreateUser}
+            disabled={loading || !newUsername || !newUserPassword}
+            startIcon={loading ? <CircularProgress size={20} /> : <AddIcon />}
+          >
+            {loading ? 'Creating...' : 'Add User'}
           </Button>
         ) : null}
       </DialogActions>

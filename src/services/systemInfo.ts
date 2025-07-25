@@ -152,8 +152,21 @@ export async function getSystemInformation(): Promise<SystemInformation> {
   return systemInfoCache.getSystemInfo();
 }
 
-// Initialize system info fetch on module load (before user login)
-console.log("Initializing system information cache...");
-systemInfoCache.getSystemInfo().catch(error => {
-  console.error("Failed to initialize system information cache:", error);
-});
+// Initialize system info cache on module load only if iLO is already configured
+import { isILoConfigured } from './config.js';
+
+(async () => {
+  try {
+    const configured = await isILoConfigured();
+    if (configured) {
+      console.log("iLO is already configured, initializing system information cache...");
+      systemInfoCache.getSystemInfo().catch(error => {
+        console.error("Failed to initialize system information cache:", error);
+      });
+    } else {
+      console.log("iLO not yet configured, system information cache will initialize after setup completion");
+    }
+  } catch (error) {
+    console.error("Error checking iLO configuration status:", error);
+  }
+})();

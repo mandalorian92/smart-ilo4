@@ -204,6 +204,12 @@ export default function InitialSetup() {
         setActiveStep(2);
         setSuccess('Setup completed successfully! You will be logged out in a few seconds...');
         
+        // Dispatch setup completion event to notify other components
+        window.dispatchEvent(new CustomEvent('setupComplete', { 
+          detail: { timestamp: Date.now() } 
+        }));
+        console.log('Dispatched setupComplete event');
+        
         // Auto logout after 3 seconds with proper cleanup
         setTimeout(() => {
           console.log('Auto-logout after setup completion');

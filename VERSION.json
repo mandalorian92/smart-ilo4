@@ -1,9 +1,25 @@
 {
-  "version": "1.1.0",
+  "version": "1.3.0",
   "buildDate": "2025-07-25",
   "changelog": [
     {
-      "version": "1.1.0",
+      "version": "1.3.0",
+      "date": "2025-07-25",
+      "type": "minor",
+      "changes": [
+        "Fixed critical password change functionality in initial setup and user settings",
+        "Enhanced password validation with comprehensive requirements (uppercase, lowercase, numbers)",
+        "Improved authentication security with automatic logout after password changes",
+        "Redesigned user management interface for better consistency with settings menu",
+        "Added real-time password requirements validation with visual feedback",
+        "Enhanced error handling and debugging for authentication processes",
+        "Improved UI consistency across all settings dialogs and forms",
+        "Added better protection for admin users and self-deletion prevention",
+        "Enhanced password management with validation checks and debug utilities"
+      ]
+    },
+    {
+      "version": "1.2.0",
       "date": "2025-07-25",
       "type": "minor",
       "changes": [
