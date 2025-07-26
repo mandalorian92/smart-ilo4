@@ -27,14 +27,15 @@ import {
   Switch,
   FormControlLabel,
   Paper,
-  Alert,
-  Snackbar,
   useTheme,
   useMediaQuery,
   IconButton,
   Tooltip
 } from "@mui/material";
-import { Refresh as RefreshIcon } from "@mui/icons-material";function FanControls({ onDebugLog }: { onDebugLog?: (message: string) => void }) {
+import { Refresh as RefreshIcon } from "@mui/icons-material";
+import { useNotifications } from './NotificationProvider';
+
+function FanControls({ onDebugLog }: { onDebugLog?: (message: string) => void }) {
   const [fans, setFans] = useState<any[]>([]);
   const [fanSpeeds, setFanSpeeds] = useState<Record<string, number>>({});
   const [editAllMode, setEditAllMode] = useState(true);
@@ -42,16 +43,12 @@ import { Refresh as RefreshIcon } from "@mui/icons-material";function FanControl
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
-  const [notification, setNotification] = useState<{
-    open: boolean;
-    message: string;
-    severity: 'success' | 'error' | 'info' | 'warning';
-  }>({ open: false, message: '', severity: 'info' });
   const [userInteracting, setUserInteracting] = useState<Record<string, boolean>>({});
   
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
+  const { showNotification } = useNotifications();
 
   const addDebugLog = (message: string) => {
     const timestamp = new Date().toLocaleTimeString();
@@ -62,14 +59,6 @@ import { Refresh as RefreshIcon } from "@mui/icons-material";function FanControl
     if (onDebugLog) {
       onDebugLog(logMessage);
     }
-  };
-
-  const showNotification = (message: string, severity: 'success' | 'error' | 'info' | 'warning' = 'info') => {
-    setNotification({ open: true, message, severity });
-  };
-
-  const closeNotification = () => {
-    setNotification(prev => ({ ...prev, open: false }));
   };
 
   useEffect(() => {
@@ -115,7 +104,7 @@ import { Refresh as RefreshIcon } from "@mui/icons-material";function FanControl
     addDebugLog(`Edit All mode automatically enabled for preset application`);
     
     // Show notification
-    showNotification(`${presetName} preset applied (${speed}%)`, 'success');
+    showNotification('success', `${presetName} preset applied (${speed}%)`);
   };
 
   const handleUpdate = async () => {
@@ -128,7 +117,7 @@ import { Refresh as RefreshIcon } from "@mui/icons-material";function FanControl
         addDebugLog(`Setting all fans to ${globalSpeed}% (PWM: ${Math.round((globalSpeed / 100) * 255)})`);
         await setAllFanSpeeds(globalSpeed);
         addDebugLog('✓ All fans updated successfully');
-        showNotification(`All fans set to ${globalSpeed}%`, 'success');
+        showNotification('success', `All fans set to ${globalSpeed}%`);
       } else {
         // Set individual fan speeds
         addDebugLog('Setting individual fan speeds:');
@@ -141,7 +130,7 @@ import { Refresh as RefreshIcon } from "@mui/icons-material";function FanControl
           }
         }
         addDebugLog('✓ Individual fan speeds updated successfully');
-        showNotification('Fan speeds updated successfully', 'success');
+        showNotification('success', 'Fan speeds updated successfully');
       }
       
       // Wait a moment for iLO to process the changes, then refresh fan data
@@ -160,7 +149,7 @@ import { Refresh as RefreshIcon } from "@mui/icons-material";function FanControl
       const errorMsg = (error as any).response?.data?.error || (error as Error).message;
       addDebugLog(`✗ Error: ${errorMsg}`);
       console.error('Failed to update fan speeds:', error);
-      showNotification(`Failed to update fan speeds: ${errorMsg}`, 'error');
+      showNotification('error', `Failed to update fan speeds: ${errorMsg}`);
     } finally {
       setLoading(false);
     }
@@ -173,12 +162,12 @@ import { Refresh as RefreshIcon } from "@mui/icons-material";function FanControl
       addDebugLog('SSH Command: fan p global unlock');
       await unlockFanControl();
       addDebugLog('✓ Fan control unlocked successfully');
-      showNotification('Fan control unlocked successfully', 'success');
+      showNotification('success', 'Fan control unlocked successfully');
     } catch (error) {
       const errorMsg = (error as any).response?.data?.error || (error as Error).message;
       addDebugLog(`✗ Unlock error: ${errorMsg}`);
       console.error('Failed to unlock fan control:', error);
-      showNotification(`Failed to unlock fan control: ${errorMsg}`, 'error');
+      showNotification('error', `Failed to unlock fan control: ${errorMsg}`);
     } finally {
       setLoading(false);
     }
@@ -189,13 +178,13 @@ import { Refresh as RefreshIcon } from "@mui/icons-material";function FanControl
     addDebugLog('Refreshing fan data...');
     try {
       await fetchFans(true); // Bust cache to get fresh data
-      showNotification('Fan data refreshed successfully', 'success');
+      showNotification('success', 'Fan data refreshed successfully');
       addDebugLog('✓ Fan data refreshed successfully');
     } catch (error) {
       const errorMsg = (error as any).response?.data?.error || (error as Error).message;
       addDebugLog(`✗ Refresh error: ${errorMsg}`);
       console.error('Failed to refresh fan data:', error);
-      showNotification(`Failed to refresh fan data: ${errorMsg}`, 'error');
+      showNotification('error', `Failed to refresh fan data: ${errorMsg}`);
     } finally {
       setRefreshing(false);
     }
@@ -644,58 +633,7 @@ import { Refresh as RefreshIcon } from "@mui/icons-material";function FanControl
         </CardContent>
       </Card>
 
-      {/* System Design Toast Notification */}
-      <Snackbar
-        open={notification.open}
-        autoHideDuration={8000}
-        onClose={closeNotification}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-        sx={{
-          '& .MuiSnackbarContent-root': {
-            minWidth: '384px', // System medium width
-            borderRadius: '8px',
-            boxShadow: theme.shadows[8],
-            backgroundColor: 'background.paper',
-            color: 'text.primary',
-            border: `1px solid ${theme.palette.divider}`
-          }
-        }}
-      >
-        <Alert 
-          onClose={closeNotification} 
-          severity={notification.severity} 
-          variant="outlined"
-          sx={{ 
-            width: '100%',
-            minWidth: '384px',
-            backgroundColor: 'background.paper',
-            border: `1px solid ${
-              notification.severity === 'success' ? theme.palette.success.main :
-              notification.severity === 'error' ? theme.palette.error.main :
-              notification.severity === 'warning' ? theme.palette.warning.main :
-              theme.palette.info.main
-            }`,
-            '& .MuiAlert-icon': {
-              fontSize: '20px'
-            },
-            '& .MuiAlert-message': {
-              fontSize: '0.875rem',
-              fontWeight: 500
-            },
-            '& .MuiAlert-action': {
-              padding: 0,
-              '& .MuiIconButton-root': {
-                padding: '4px',
-                '&:hover': {
-                  backgroundColor: 'action.hover'
-                }
-              }
-            }
-          }}
-        >
-          {notification.message}
-        </Alert>
-      </Snackbar>
+
     </Box>
   );
 }
@@ -705,11 +643,7 @@ function SafeSensorLimits({ onDebugLog }: { onDebugLog?: (message: string) => vo
   const [loading, setLoading] = useState(true);
   const [selectedSensor, setSelectedSensor] = useState("");
   const [lowLimit, setLowLimit] = useState(20);
-  const [notification, setNotification] = useState<{
-    open: boolean;
-    message: string;
-    severity: 'success' | 'error' | 'info' | 'warning';
-  }>({ open: false, message: '', severity: 'info' });
+  const { showNotification } = useNotifications();
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -752,11 +686,7 @@ function SafeSensorLimits({ onDebugLog }: { onDebugLog?: (message: string) => vo
   const handleSetLowLimit = async () => {
     if (!selectedSensor) {
       addDebugLog('❌ Sensor configuration failed: No sensor selected');
-      setNotification({
-        open: true,
-        message: 'Please select a sensor first',
-        severity: 'warning'
-      });
+      showNotification('warning', 'Please select a sensor first');
       return;
     }
 
@@ -771,25 +701,13 @@ function SafeSensorLimits({ onDebugLog }: { onDebugLog?: (message: string) => vo
       await setSensorLowLimit(sensorId, iloValue);
       
       addDebugLog(`✓ Sensor configuration successful: ${selectedSensor} low limit set to ${lowLimit}%`);
-      setNotification({
-        open: true,
-        message: `Low limit set to ${lowLimit}% for ${selectedSensor}`,
-        severity: 'success'
-      });
+      showNotification('success', `Low limit set to ${lowLimit}% for ${selectedSensor}`);
     } catch (error) {
       const errorMsg = (error as any).response?.data?.error || (error as Error).message;
       addDebugLog(`✗ Sensor configuration failed: ${errorMsg}`);
       console.error('Failed to set low limit:', error);
-      setNotification({
-        open: true,
-        message: 'Failed to set sensor low limit',
-        severity: 'error'
-      });
+      showNotification('error', 'Failed to set sensor low limit');
     }
-  };
-
-  const handleCloseNotification = () => {
-    setNotification({ ...notification, open: false });
   };
 
   if (loading) return (
@@ -911,58 +829,7 @@ function SafeSensorLimits({ onDebugLog }: { onDebugLog?: (message: string) => vo
           </Grid>
         </Grid>
 
-        {/* HPE Design System Toast Notification */}
-        <Snackbar
-          open={notification.open}
-          autoHideDuration={8000}
-          onClose={handleCloseNotification}
-          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-          sx={{
-            '& .MuiSnackbarContent-root': {
-              minWidth: '384px', // HPE medium width
-              borderRadius: '8px',
-              boxShadow: theme.shadows[8],
-              backgroundColor: 'background.paper',
-              color: 'text.primary',
-              border: `1px solid ${theme.palette.divider}`
-            }
-          }}
-        >
-          <Alert 
-            onClose={handleCloseNotification} 
-            severity={notification.severity} 
-            variant="outlined"
-            sx={{ 
-              width: '100%',
-              minWidth: '384px',
-              backgroundColor: 'background.paper',
-              border: `1px solid ${
-                notification.severity === 'success' ? theme.palette.success.main :
-                notification.severity === 'error' ? theme.palette.error.main :
-                notification.severity === 'warning' ? theme.palette.warning.main :
-                theme.palette.info.main
-              }`,
-              '& .MuiAlert-icon': {
-                fontSize: '20px'
-              },
-              '& .MuiAlert-message': {
-                fontSize: '0.875rem',
-                fontWeight: 500
-              },
-              '& .MuiAlert-action': {
-                padding: 0,
-                '& .MuiIconButton-root': {
-                  padding: '4px',
-                  '&:hover': {
-                    backgroundColor: 'action.hover'
-                  }
-                }
-              }
-            }}
-          >
-            {notification.message}
-          </Alert>
-        </Snackbar>
+
       </CardContent>
     </Card>
   );

@@ -14,23 +14,18 @@ import {
   FormControl,
   InputLabel,
   useTheme,
-  useMediaQuery,
-  Alert,
-  Snackbar
+  useMediaQuery
 } from "@mui/material";
 import SettingsIcon from '@mui/icons-material/Settings';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import { useNotifications } from './NotificationProvider';
 
 function Controls() {
   const [sensors, setSensors] = useState<any[]>([]);
   const [selected, setSelected] = useState<string>("");
   const [value, setValue] = useState<number>(0);
   const [loading, setLoading] = useState(true);
-  const [notification, setNotification] = useState<{
-    open: boolean;
-    message: string;
-    severity: 'success' | 'error' | 'info' | 'warning';
-  }>({ open: false, message: '', severity: 'info' });
+  const { showNotification } = useNotifications();
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -43,11 +38,7 @@ function Controls() {
         setSensors(data);
       } catch (error) {
         console.error('Failed to fetch sensors:', error);
-        setNotification({
-          open: true,
-          message: 'Failed to fetch sensors',
-          severity: 'error'
-        });
+        showNotification('error', 'Failed to fetch sensors');
       } finally {
         setLoading(false);
       }
@@ -57,51 +48,27 @@ function Controls() {
 
   const handleOverride = async () => {
     if (!selected) {
-      setNotification({
-        open: true,
-        message: 'Please select a sensor first',
-        severity: 'warning'
-      });
+      showNotification('warning', 'Please select a sensor first');
       return;
     }
     
     try {
       await overrideSensor(selected, value);
-      setNotification({
-        open: true,
-        message: `Sensor ${selected} overridden to ${value}°C`,
-        severity: 'success'
-      });
+      showNotification('success', `Sensor ${selected} overridden to ${value}°C`);
     } catch (error) {
       console.error('Failed to override sensor:', error);
-      setNotification({
-        open: true,
-        message: 'Failed to override sensor',
-        severity: 'error'
-      });
+      showNotification('error', 'Failed to override sensor');
     }
   };
 
   const handleReset = async () => {
     try {
       await resetSensors();
-      setNotification({
-        open: true,
-        message: 'All sensors reset to default values',
-        severity: 'success'
-      });
+      showNotification('success', 'All sensors reset to default values');
     } catch (error) {
       console.error('Failed to reset sensors:', error);
-      setNotification({
-        open: true,
-        message: 'Failed to reset sensors',
-        severity: 'error'
-      });
+      showNotification('error', 'Failed to reset sensors');
     }
-  };
-
-  const handleCloseNotification = () => {
-    setNotification({ ...notification, open: false });
   };
 
   if (loading) return (
@@ -272,18 +239,6 @@ function Controls() {
           </Grid>
         </CardContent>
       </Card>
-
-      {/* Notification Snackbar */}
-      <Snackbar
-        open={notification.open}
-        autoHideDuration={4000}
-        onClose={handleCloseNotification}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert onClose={handleCloseNotification} severity={notification.severity} sx={{ width: '100%' }}>
-          {notification.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 }

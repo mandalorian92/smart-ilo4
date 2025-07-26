@@ -24,6 +24,7 @@ import {
 } from '@mui/icons-material';
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { NotificationProvider } from "./components/NotificationProvider";
 import ActionsMenu from "./components/ActionsMenu";
 import Dashboard from "./components/Dashboard";
 import HistoryChart from "./components/HistoryChart";
@@ -485,11 +486,13 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        {showSplash ? (
-          <SplashScreen onSplashComplete={handleSplashComplete} />
-        ) : (
-          <AuthenticatedApp />
-        )}
+        <NotificationProvider>
+          {showSplash ? (
+            <SplashScreen onSplashComplete={handleSplashComplete} />
+          ) : (
+            <AuthenticatedApp />
+          )}
+        </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>
   );

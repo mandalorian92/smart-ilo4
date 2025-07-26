@@ -196,7 +196,7 @@ const PowerCard: React.FC = () => {
           sx={{
             height: 8,
             borderRadius: 4,
-            backgroundColor: theme.palette.grey[200],
+            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : theme.palette.grey[200],
             '& .MuiLinearProgress-bar': {
               backgroundColor: statusColor,
               borderRadius: 4,
@@ -238,8 +238,8 @@ const PowerCard: React.FC = () => {
                 gap: 1,
                 p: 1.5,
                 borderRadius: 2,
-                backgroundColor: theme.palette.grey[50],
-                border: `1px solid ${theme.palette.grey[200]}`,
+                backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : theme.palette.grey[50],
+                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : theme.palette.grey[200]}`,
               }}
             >
               <Box sx={{ color: 'primary.main' }}>
@@ -262,8 +262,8 @@ const PowerCard: React.FC = () => {
           <Box sx={{ 
             p: 1.5, 
             borderRadius: 2, 
-            backgroundColor: theme.palette.grey[50],
-            border: `1px solid ${theme.palette.grey[200]}`,
+            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : theme.palette.grey[50],
+            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : theme.palette.grey[200]}`,
             textAlign: 'center'
           }}>
             <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
