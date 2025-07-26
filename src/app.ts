@@ -8,6 +8,7 @@ import fansRouter from "./api/fans.js";
 import redfishRouter from "./api/redfish.js";
 import automationRouter from "./api/automation.js";
 import systemInfoRouter from "./api/systemInfo.js";
+import powerRouter from "./api/power.js";
 import configRouter from "./api/config.js";
 import appConfigRouter from "./api/appConfig.js";
 
@@ -38,6 +39,7 @@ app.use("/automation", automationRouter);
 app.use("/api/system", systemInfoRouter);
 app.use("/api/ilo", configRouter);
 app.use("/api/app", appConfigRouter);
+app.use("/api/power", powerRouter);
 
 // Serve static files from frontend build
 app.use(express.static(path.join(__dirname, "../frontend/build")));

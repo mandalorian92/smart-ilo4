@@ -17,6 +17,7 @@ const CACHE_TTL = {
   sensors: 30000,      // 30 seconds
   fans: 30000,         // 30 seconds
   systemInfo: 300000,  // 5 minutes
+  power: 30000,        // 30 seconds
   history: 60000       // 1 minute
 };
 
@@ -160,3 +161,28 @@ export const restartServerWithConfig = (port?: number): Promise<void> => post('/
 // Auth API for admin setup
 export const setupAdminPassword = async (username: string, password: string, tempPassword?: string): Promise<{ success: boolean; message: string }> => 
   post('/api/auth/setup-admin', { username, password, tempPassword });
+
+// Power Monitoring API
+export interface PowerInformation {
+  powerRegulation: string;
+  powerCap: number;
+  presentPower: number;
+  averagePower: number;
+  maxPower: number;
+  minPower: number;
+  powerSupplyCapacity: number;
+  serverMaxPower: number;
+  serverMinPower: number;
+  warningType: string;
+  warningThreshold: number;
+  warningDuration: number;
+  powerMicroVersion: string;
+  autoPowerRestore: string;
+}
+
+export const getPowerInformation = (): Promise<PowerInformation> => 
+  get('/api/power/info', 'power', CACHE_TTL.power);
+export const refreshPowerInformation = (): Promise<PowerInformation> => {
+  invalidateCache(['power']);
+  return post('/api/power/refresh');
+};
