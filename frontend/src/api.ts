@@ -180,9 +180,20 @@ export interface PowerInformation {
   autoPowerRestore: string;
 }
 
+export interface SystemLogRecord {
+  number: number;
+  severity: 'Caution' | 'Critical' | 'Informational' | 'OK';
+  date: string;
+  time: string;
+  description: string;
+}
+
 export const getPowerInformation = (): Promise<PowerInformation> => 
   get('/api/power/info', 'power', CACHE_TTL.power);
 export const refreshPowerInformation = (): Promise<PowerInformation> => {
   invalidateCache(['power']);
   return post('/api/power/refresh');
 };
+
+export const getRecentSystemLogs = (): Promise<SystemLogRecord[]> => 
+  get('/api/systemlog/recent', 'systemlogs', 30000); // 30 second cache

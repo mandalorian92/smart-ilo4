@@ -34,8 +34,186 @@ import {
 } from "@mui/material";
 import { Refresh as RefreshIcon } from "@mui/icons-material";
 import { useNotifications } from './NotificationProvider';
+import { SPACING } from '../constants/spacing';
+import { CARD_STYLES, getCardContainerProps, getNestedCardProps } from '../constants/cardStyles';
 
-function FanControls({ onDebugLog }: { onDebugLog?: (message: string) => void }) {
+// Quick Presets Component - Separate card for preset buttons
+function FanPresets({ onDebugLog }: { onDebugLog?: (message: string) => void }) {
+  const [fans, setFans] = useState<any[]>([]);
+  const [fanSpeeds, setFanSpeeds] = useState<Record<string, number>>({});
+  const [globalSpeed, setGlobalSpeed] = useState(25);
+  const [loading, setLoading] = useState(false);
+  const { showNotification } = useNotifications();
+  
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  const addDebugLog = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    const logMessage = `[${timestamp}] ${message}`;
+    
+    if (onDebugLog) {
+      onDebugLog(logMessage);
+    }
+  };
+
+  useEffect(() => {
+    fetchFans();
+  }, []);
+
+  const fetchFans = async () => {
+    try {
+      const data = await getFans();
+      setFans(data);
+      const speeds: Record<string, number> = {};
+      data.forEach((fan: any) => {
+        speeds[fan.name] = Math.max(10, fan.speed);
+      });
+      setFanSpeeds(speeds);
+    } catch (error) {
+      console.error('Failed to fetch fans:', error);
+    }
+  };
+
+  const applyPreset = async (speed: number) => {
+    try {
+      setLoading(true);
+      
+      // Apply the preset speed to all fans
+      setGlobalSpeed(speed);
+      const newSpeeds: Record<string, number> = {};
+      fans.forEach(fan => newSpeeds[fan.name] = speed);
+      setFanSpeeds(newSpeeds);
+      
+      const presetName = speed === 20 ? 'Quiet' : speed === 45 ? 'Normal' : 'Turbo';
+      addDebugLog(`${presetName} preset applied - setting all fans to ${speed}%`);
+      
+      // Apply to system
+      await setAllFanSpeeds(speed);
+      showNotification('success', `${presetName} preset applied (${speed}%)`);
+      
+      // Refresh fan data
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      await fetchFans();
+      
+    } catch (error) {
+      const errorMsg = (error as any).response?.data?.error || (error as Error).message;
+      addDebugLog(`✗ Error: ${errorMsg}`);
+      showNotification('error', `Failed to apply preset: ${errorMsg}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card 
+      {...getCardContainerProps(theme)}
+    >
+      <CardContent {...CARD_STYLES.CONTENT}>
+        {/* Single Row Layout - Title/Description on left, Buttons on right */}
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', sm: 'row' },
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          justifyContent: 'space-between',
+          gap: { xs: SPACING.COMPONENT.LARGE, sm: SPACING.COMPONENT.LARGE }
+        }}>
+          {/* Left Side - Title and Description */}
+          <Box sx={{ flex: 1 }}>
+            <Typography 
+              {...CARD_STYLES.TITLE}
+            >
+              Quick Presets
+            </Typography>
+            <Typography 
+              {...CARD_STYLES.SUBTITLE}
+            >
+              Apply predefined fan speed configurations to all fans
+            </Typography>
+          </Box>
+          
+          {/* Right Side - Preset Buttons */}
+          <Box sx={{ 
+            display: 'flex', 
+            gap: SPACING.COMPONENT.MEDIUM,
+            flexWrap: 'wrap',
+            justifyContent: { xs: 'flex-start', sm: 'flex-end' }
+          }}>
+            <Button 
+              onClick={() => applyPreset(20)}
+              variant="outlined"
+              size={isMobile ? "medium" : "large"}
+              color="info"
+              disabled={loading}
+              sx={{ 
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 500,
+                px: 3,
+                py: 1.5,
+                minWidth: 120,
+                fontSize: { xs: '0.875rem', sm: '1rem' },
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: 2
+                }
+              }}
+            >
+              Quiet
+            </Button>
+            <Button 
+              onClick={() => applyPreset(45)}
+              variant="outlined"
+              size={isMobile ? "medium" : "large"}
+              color="success"
+              disabled={loading}
+              sx={{ 
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 500,
+                px: 3,
+                py: 1.5,
+                minWidth: 120,
+                fontSize: { xs: '0.875rem', sm: '1rem' },
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: 2
+                }
+              }}
+            >
+              Normal
+            </Button>
+            <Button 
+              onClick={() => applyPreset(95)}
+              variant="outlined"
+              size={isMobile ? "medium" : "large"}
+              color="error"
+              disabled={loading}
+              sx={{ 
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 500,
+                px: 3,
+                py: 1.5,
+                minWidth: 120,
+                fontSize: { xs: '0.875rem', sm: '1rem' },
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: 2
+                }
+              }}
+            >
+              Turbo
+            </Button>
+          </Box>
+        </Box>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Individual Fan Controls Component - Separate card for detailed fan control
+function FanControlCard({ onDebugLog }: { onDebugLog?: (message: string) => void }) {
   const [fans, setFans] = useState<any[]>([]);
   const [fanSpeeds, setFanSpeeds] = useState<Record<string, number>>({});
   const [editAllMode, setEditAllMode] = useState(true);
@@ -243,191 +421,27 @@ function FanControls({ onDebugLog }: { onDebugLog?: (message: string) => void })
   };
 
   return (
-    <Box component="section" role="main" aria-label="Fan Control System">
-      {/* System Page Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography 
-          variant="h4" 
-          component="h1"
-          sx={{ 
-            fontSize: { xs: '1.5rem', sm: '2rem' },
-            fontWeight: 600,
-            mb: 0.5,
-            color: 'text.primary',
-            display: 'flex',
-            alignItems: 'center'
-          }}
-        >
-          Fan Control System
-          {loading && <CircularProgress size={24} sx={{ ml: 2 }} />}
-        </Typography>
-        
-        <Typography 
-          variant="body1" 
-          color="text.secondary"
-          sx={{ 
-            fontSize: { xs: '0.875rem', sm: '1rem' },
-            mb: 0
-          }}
-        >
-          Monitor and control system cooling fans with precision speed management
-        </Typography>
-      </Box>
-
-      {/* Fan Speed Presets - System Action Bar */}
-      <Card 
-        elevation={0}
-        sx={{ 
-          mb: 4,
-          border: `1px solid ${theme.palette.divider}`,
-          borderRadius: 2
-        }}
-      >
-        <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
+    <Card 
+      {...getCardContainerProps(theme)}
+    >
+        <CardContent {...CARD_STYLES.CONTENT}>
           {/* Header Section */}
-          <Box sx={{ mb: 3 }}>
-            <Typography 
-              variant="h6" 
-              component="h2"
-              sx={{ 
-                fontSize: { xs: '1rem', sm: '1.125rem' },
-                fontWeight: 600,
-                mb: 0.5,
-                color: 'text.primary'
-              }}
-            >
-              Quick Presets
-            </Typography>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                fontSize: { xs: '0.8rem', sm: '0.875rem' },
-                color: 'text.secondary'
-              }}
-            >
-              Apply predefined fan speed configurations
-            </Typography>
-          </Box>
-          
-          {/* Content Section - Preset Buttons */}
-          <Box sx={{ 
-            display: 'flex', 
-            gap: 2,
-            flexWrap: 'wrap',
-            justifyContent: { xs: 'center', sm: 'flex-start' }
-          }}>
-            <Button 
-              onClick={() => applyPreset(20)}
-              variant="outlined"
-              size={isMobile ? "medium" : "large"}
-              color="info"
-              disabled={loading}
-              sx={{ 
-                borderRadius: 2,
-                textTransform: 'none',
-                fontWeight: 500,
-                px: 3,
-                py: 1.5,
-                minWidth: 120,
-                fontSize: { xs: '0.875rem', sm: '1rem' },
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: 2
-                }
-              }}
-            >
-              Quiet
-            </Button>
-            <Button 
-              onClick={() => applyPreset(45)}
-              variant="outlined"
-              size={isMobile ? "medium" : "large"}
-              color="success"
-              disabled={loading}
-              sx={{ 
-                borderRadius: 2,
-                textTransform: 'none',
-                fontWeight: 500,
-                px: 3,
-                py: 1.5,
-                minWidth: 120,
-                fontSize: { xs: '0.875rem', sm: '1rem' },
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: 2
-                }
-              }}
-            >
-              Normal
-            </Button>
-            <Button 
-              onClick={() => applyPreset(95)}
-              variant="outlined"
-              size={isMobile ? "medium" : "large"}
-              color="error"
-              disabled={loading}
-              sx={{ 
-                borderRadius: 2,
-                textTransform: 'none',
-                fontWeight: 500,
-                px: 3,
-                py: 1.5,
-                minWidth: 120,
-                fontSize: { xs: '0.875rem', sm: '1rem' },
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: 2
-                }
-              }}
-            >
-              Turbo
-            </Button>
-          </Box>
-        </CardContent>
-      </Card>
-
-      {/* Individual Fan Controls - System Content Grid */}
-      <Card 
-        elevation={0}
-        sx={{ 
-          mb: 4,
-          border: `1px solid ${theme.palette.divider}`,
-          borderRadius: 2
-        }}
-      >
-        <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
-          {/* Header Section */}
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'flex-start',
-            mb: 3
-          }}>
+          <Box {...CARD_STYLES.HEADER}>
             <Box>
               <Typography 
-                variant="h6" 
+                {...CARD_STYLES.TITLE}
                 component="h2"
-                sx={{ 
-                  fontSize: { xs: '1rem', sm: '1.125rem' },
-                  fontWeight: 600,
-                  mb: 0.5,
-                  color: 'text.primary'
-                }}
               >
                 Fan Control
               </Typography>
               <Typography 
-                variant="body2" 
-                sx={{ 
-                  fontSize: { xs: '0.8rem', sm: '0.875rem' },
-                  color: 'text.secondary'
-                }}
+                {...CARD_STYLES.SUBTITLE}
               >
                 Fine-tune individual fan speeds for optimal cooling performance
               </Typography>
             </Box>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'flex-end' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: SPACING.COMPONENT.SMALL, alignItems: 'flex-end' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: SPACING.COMPONENT.SMALL }}>
                 <Tooltip title="Refresh fan data">
                   <IconButton
                     onClick={handleRefresh}
@@ -464,28 +478,19 @@ function FanControls({ onDebugLog }: { onDebugLog?: (message: string) => void })
           </Box>
           
           {/* Content Section - Fan Control Grid */}
-          <Grid container spacing={3}>
+          <Grid container spacing={SPACING.COMPONENT.LARGE}>
             {fans.map((fan) => (
               <Grid item xs={12} key={fan.name}>
                 <Card 
-                  elevation={0}
-                  sx={{ 
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: 2,
-                    transition: 'all 0.2s ease-in-out',
-                    '&:hover': {
-                      borderColor: theme.palette.primary.main,
-                      boxShadow: `0 4px 12px ${theme.palette.primary.main}15`
-                    }
-                  }}
+                  {...getNestedCardProps(theme)}
                 >
-                  <CardContent sx={{ p: 3 }}>
+                  <CardContent {...CARD_STYLES.NESTED_CONTENT}>
                     {/* Fan Card Header */}
                     <Box sx={{ 
                       display: 'flex', 
                       justifyContent: 'space-between', 
                       alignItems: 'center',
-                      mb: 2
+                      mb: SPACING.COMPONENT.MEDIUM
                     }}>
                       <Typography 
                         variant="subtitle1" 
@@ -511,7 +516,7 @@ function FanControls({ onDebugLog }: { onDebugLog?: (message: string) => void })
                     <Box sx={{ 
                       display: 'flex', 
                       alignItems: 'center', 
-                      gap: 3
+                      gap: SPACING.COMPONENT.LARGE
                     }}>
                       <Slider
                         value={Math.max(10, fanSpeeds[fan.name] || fan.speed)}
@@ -585,10 +590,10 @@ function FanControls({ onDebugLog }: { onDebugLog?: (message: string) => void })
           <Box sx={{ 
             display: 'flex', 
             flexDirection: { xs: 'column', sm: 'row' },
-            gap: 2, 
+            gap: SPACING.COMPONENT.MEDIUM, 
             justifyContent: 'flex-end',
-            pt: 3,
-            mt: 3,
+            pt: SPACING.COMPONENT.LARGE,
+            mt: SPACING.COMPONENT.LARGE,
             borderTop: `1px solid ${theme.palette.divider}`
           }}>
             <Button
@@ -632,9 +637,6 @@ function FanControls({ onDebugLog }: { onDebugLog?: (message: string) => void })
           </Box>
         </CardContent>
       </Card>
-
-
-    </Box>
   );
 }
 
@@ -718,128 +720,130 @@ function SafeSensorLimits({ onDebugLog }: { onDebugLog?: (message: string) => vo
 
   return (
     <Card 
-      elevation={0}
-      sx={{ 
-        border: `1px solid ${theme.palette.divider}`,
-        borderRadius: 2
-      }}
+      {...getCardContainerProps(theme)}
     >
-      <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
+      <CardContent {...CARD_STYLES.CONTENT}>
         {/* Header Section */}
-        <Box sx={{ mb: 3 }}>
+        <Box sx={{ mb: SPACING.COMPONENT.LARGE }}>
           <Typography 
-            variant="h6" 
+            {...CARD_STYLES.TITLE}
             component="h2"
-            sx={{ 
-              fontSize: { xs: '1rem', sm: '1.125rem' },
-              fontWeight: 600,
-              mb: 0.5,
-              color: 'text.primary'
-            }}
           >
             Sensor Configuration
           </Typography>
           <Typography 
-            variant="body2" 
-            sx={{ 
-              fontSize: { xs: '0.8rem', sm: '0.875rem' },
-              color: 'text.secondary'
-            }}
+            {...CARD_STYLES.SUBTITLE}
           >
             Configure threshold limits for environmental sensors
           </Typography>
         </Box>
 
         {/* Content Section - Form */}
-        <Grid container spacing={3} alignItems="end">
-          <Grid item xs={12} sm={6}>
-            <FormControl fullWidth variant="outlined">
-              <InputLabel id="sensor-select-label">Select Sensor</InputLabel>
-              <Select
-                labelId="sensor-select-label"
-                value={selectedSensor}
-                label="Select Sensor"
-                onChange={(e) => setSelectedSensor(e.target.value)}
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <Grid container spacing={SPACING.COMPONENT.MEDIUM} alignItems="stretch">
+            <Grid item xs={12}>
+              <FormControl fullWidth variant="outlined">
+                <InputLabel id="sensor-select-label">Select Sensor</InputLabel>
+                <Select
+                  labelId="sensor-select-label"
+                  value={selectedSensor}
+                  label="Select Sensor"
+                  onChange={(e) => setSelectedSensor(e.target.value)}
+                  sx={{ 
+                    '& .MuiSelect-select': {
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1
+                    }
+                  }}
+                >
+                  {sensors.map((sensor) => (
+                    <MenuItem key={sensor.name} value={sensor.name}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {sensor.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          ({sensor.reading}°C)
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Low Limit"
+                type="number"
+                value={lowLimit}
+                onChange={(e) => setLowLimit(parseInt(e.target.value) || 20)}
+                fullWidth
+                variant="outlined"
+                InputProps={{
+                  endAdornment: <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>%</Typography>
+                }}
+                inputProps={{ min: 10, max: 100, step: 1 }}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    textAlign: 'right',
+                    pr: 0.5
+                  }
+                }}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <Button
+                variant="contained"
+                onClick={handleSetLowLimit}
+                disabled={!selectedSensor}
+                fullWidth
+                size="large"
                 sx={{ 
-                  '& .MuiSelect-select': {
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  py: 1.5,
+                  fontSize: '1rem',
+                  height: '56px', // Match TextField height
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: 4
                   }
                 }}
               >
-                {sensors.map((sensor) => (
-                  <MenuItem key={sensor.name} value={sensor.name}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        {sensor.name}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        ({sensor.reading}°C)
-                      </Typography>
-                    </Box>
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+                Set Limit
+              </Button>
+            </Grid>
           </Grid>
-
-          <Grid item xs={12} sm={3}>
-            <TextField
-              label="Low Limit"
-              type="number"
-              value={lowLimit}
-              onChange={(e) => setLowLimit(parseInt(e.target.value) || 20)}
-              fullWidth
-              variant="outlined"
-              InputProps={{
-                endAdornment: <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>%</Typography>
-              }}
-              inputProps={{ min: 10, max: 100, step: 1 }}
-              sx={{
-                '& .MuiInputBase-input': {
-                  textAlign: 'right',
-                  pr: 0.5
-                }
-              }}
-            />
-          </Grid>
-
-          <Grid item xs={12} sm={3}>
-            <Button
-              variant="contained"
-              onClick={handleSetLowLimit}
-              disabled={!selectedSensor}
-              fullWidth
-              size="large"
-              sx={{ 
-                borderRadius: 2,
-                textTransform: 'none',
-                fontWeight: 500,
-                py: 1.5,
-                fontSize: '1rem',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: 4
-                }
-              }}
-            >
-              Set Limit
-            </Button>
-          </Grid>
-        </Grid>
-
-
+        </Box>
       </CardContent>
     </Card>
   );
 }
 
-export default function Controls({ onDebugLog }: { onDebugLog?: (message: string) => void }) {
+// Sensor Configuration Component (SafeSensorLimits)
+function SensorConfiguration() {
+  return <SafeSensorLimits />;
+}
+
+// Export individual components for flexible usage
+export { FanPresets, FanControlCard, SensorConfiguration };
+
+// For backward compatibility, export a combined component
+export default function FanControls({ onDebugLog }: { onDebugLog?: (message: string) => void }) {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <FanControls onDebugLog={onDebugLog} />
-      <SafeSensorLimits onDebugLog={onDebugLog} />
+    <Box sx={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      gap: SPACING.ROW,
+      width: '100%' 
+    }}>
+      <FanPresets onDebugLog={onDebugLog} />
+      <FanControlCard onDebugLog={onDebugLog} />
+      <SensorConfiguration />
     </Box>
   );
 }

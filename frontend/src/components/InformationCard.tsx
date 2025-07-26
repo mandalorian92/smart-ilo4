@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import { Refresh as RefreshIcon, Info as InfoIcon } from '@mui/icons-material';
 import { getSystemInformation, refreshSystemInformation, getILoStatus, type SystemInformation } from '../api';
+import { CARD_STYLES, getGridCardContainerProps } from '../constants/cardStyles';
 
 const InformationCard: React.FC = () => {
   const [systemInfo, setSystemInfo] = useState<SystemInformation | null>(null);
@@ -228,34 +229,14 @@ const InformationCard: React.FC = () => {
   if (loading) {
     return (
       <Card
-        variant="outlined"
-        sx={{
-          height: '100%',
-          border: `1px solid ${theme.palette.divider}`,
-          borderRadius: 3,
-          transition: 'all 0.2s ease-in-out',
-          '&:hover': {
-            borderColor: theme.palette.primary.main,
-            boxShadow: `0 8px 24px ${theme.palette.primary.main}15`
-          }
-        }}
+        {...getGridCardContainerProps(theme)}
       >
-        <CardContent sx={{ p: { xs: 3, sm: 4 }, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'flex-start',
-            mb: 3
-          }}>
+        <CardContent {...CARD_STYLES.CONTENT}>
+          <Box {...CARD_STYLES.HEADER}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <InfoIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+              <InfoIcon {...CARD_STYLES.HEADER_ICON} />
               <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 600,
-                  color: 'text.primary',
-                  fontSize: { xs: '1rem', sm: '1.125rem' }
-                }}
+                {...CARD_STYLES.TITLE}
               >
                 Information
               </Typography>
@@ -279,30 +260,14 @@ const InformationCard: React.FC = () => {
   if (!systemInfo && !error && !loading) {
     return (
       <Card
-        variant="outlined"
-        sx={{
-          height: '100%',
-          border: `1px solid ${theme.palette.divider}`,
-          borderRadius: 3,
-          transition: 'all 0.2s ease-in-out'
-        }}
+        {...getGridCardContainerProps(theme)}
       >
-        <CardContent sx={{ p: { xs: 3, sm: 4 }, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'flex-start',
-            mb: 3
-          }}>
+        <CardContent {...CARD_STYLES.CONTENT}>
+          <Box {...CARD_STYLES.HEADER}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <InfoIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+              <InfoIcon {...CARD_STYLES.HEADER_ICON} />
               <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 600,
-                  color: 'text.primary',
-                  fontSize: { xs: '1rem', sm: '1.125rem' }
-                }}
+                {...CARD_STYLES.TITLE}
               >
                 Information
               </Typography>
@@ -346,30 +311,14 @@ const InformationCard: React.FC = () => {
   if (error) {
     return (
       <Card
-        variant="outlined"
-        sx={{
-          height: '100%',
-          border: `1px solid ${theme.palette.divider}`,
-          borderRadius: 3,
-          transition: 'all 0.2s ease-in-out'
-        }}
+        {...getGridCardContainerProps(theme)}
       >
-        <CardContent sx={{ p: { xs: 3, sm: 4 }, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'flex-start',
-            mb: 3
-          }}>
+        <CardContent {...CARD_STYLES.CONTENT}>
+          <Box {...CARD_STYLES.HEADER}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <InfoIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+              <InfoIcon {...CARD_STYLES.HEADER_ICON} />
               <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 600,
-                  color: 'text.primary',
-                  fontSize: { xs: '1rem', sm: '1.125rem' }
-                }}
+                {...CARD_STYLES.TITLE}
               >
                 Information
               </Typography>
@@ -415,35 +364,15 @@ const InformationCard: React.FC = () => {
 
   return (
     <Card
-      variant="outlined"
-      sx={{
-        height: '100%',
-        border: `1px solid ${theme.palette.divider}`,
-        borderRadius: 3,
-        transition: 'all 0.2s ease-in-out',
-        '&:hover': {
-          borderColor: theme.palette.primary.main,
-          boxShadow: `0 8px 24px ${theme.palette.primary.main}15`
-        }
-      }}
+      {...getGridCardContainerProps(theme)}
     >
-      <CardContent sx={{ p: { xs: 3, sm: 4 }, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <CardContent {...CARD_STYLES.CONTENT}>
         {/* Header Section - Content Layout */}
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'flex-start',
-          mb: 3
-        }}>
+        <Box {...CARD_STYLES.HEADER}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <InfoIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+            <InfoIcon {...CARD_STYLES.HEADER_ICON} />
             <Typography
-              variant="h6"
-              sx={{
-                fontWeight: 600,
-                color: 'text.primary',
-                fontSize: { xs: '1rem', sm: '1.125rem' }
-              }}
+              {...CARD_STYLES.TITLE}
             >
               Information
             </Typography>

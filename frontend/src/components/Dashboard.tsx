@@ -29,6 +29,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
 import { searchInRow } from '../utils/searchUtils';
 import DataTable, { StatusIndicator, ProgressBar } from './DataTable';
+import { SPACING } from '../constants/spacing';
 
 // Circular progress component for gauges (memoized for performance)
 const CircularGauge = React.memo((props: {
@@ -424,6 +425,8 @@ const FanCard = React.memo((props: { fan: any }) => {
 });
 
 function Dashboard() {
+  // Use system-wide spacing constants for consistency across all tabs
+  
   const [sensors, setSensors] = useState<any[]>([]);
   const [fans, setFans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -531,67 +534,11 @@ function Dashboard() {
 
   return (
     <Box component="section" role="main" aria-label="System Monitoring Dashboard">
-      {/* Dashboard Header */}
-      <Box sx={{ 
-        display: 'flex', 
-        flexDirection: { xs: 'column', sm: 'row' },
-        justifyContent: 'space-between',
-        alignItems: { xs: 'flex-start', sm: 'center' },
-        mb: 3,
-        gap: { xs: 2, sm: 0 }
-      }}>
-        <Box>
-          <Typography 
-            variant="h4" 
-            component="h1"
-            sx={{ 
-              fontSize: { xs: '1.5rem', sm: '2rem' },
-              fontWeight: 600,
-              mb: 0.5
-            }}
-          >
-            System Monitoring
-          </Typography>
-          <Typography 
-            variant="body2" 
-            color="text.secondary"
-            sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
-          >
-            Last updated: {lastUpdate.toLocaleTimeString()}
-            <Tooltip title="Refresh data">
-              <IconButton 
-                size="small" 
-                onClick={handleRefresh}
-                sx={{ ml: 1 }}
-              >
-                <RefreshIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          </Typography>
-        </Box>
-        
-        <FormControlLabel
-          control={
-            <Switch 
-              checked={showFahrenheit} 
-              onChange={handleTemperatureUnitToggle}
-              size={isMobile ? "small" : "medium"}
-            />
-          }
-          label={
-            <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-              {isMobile ? "°F" : "Show in Fahrenheit"}
-            </Typography>
-          }
-          sx={{ m: 0 }}
-        />
-      </Box>
-
       {/* Centralized Search Box */}
       <Box sx={{ 
         display: 'flex', 
         justifyContent: 'center',
-        mb: 4
+        mb: SPACING.ROW
       }}>
         <Box sx={{ width: { xs: '100%', sm: '400px', md: '350px' }, maxWidth: 400 }}>
           <TextField
@@ -684,6 +631,23 @@ function Dashboard() {
         title="Fan Controllers"
         icon={<AirIcon sx={{ color: theme.palette.primary.main }} />}
         originalDataLength={fans.length}
+        headerActions={
+          <FormControlLabel
+            control={
+              <Switch 
+                checked={showFahrenheit} 
+                onChange={handleTemperatureUnitToggle}
+                size={isMobile ? "small" : "medium"}
+              />
+            }
+            label={
+              <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                {isMobile ? "°F" : "Show in Fahrenheit"}
+              </Typography>
+            }
+            sx={{ m: 0 }}
+          />
+        }
         columns={[
           {
             id: 'name',

@@ -28,11 +28,12 @@ import { NotificationProvider } from "./components/NotificationProvider";
 import ActionsMenu from "./components/ActionsMenu";
 import Dashboard from "./components/Dashboard";
 import HistoryChart from "./components/HistoryChart";
-import FanControls from "./components/FanControls";
+import Controls from "./components/Controls";
 import DebugTerminal from "./components/DebugTerminal";
 import InformationCard from "./components/InformationCard";
 import PowerCard from "./components/PowerCard";
 import SystemHealthOverview from "./components/SystemHealthOverview";
+import RecentActivity from "./components/RecentActivity";
 import SplashScreen from "./components/SplashScreen";
 import SystemLogo from "./components/SystemLogo";
 import LoginPage from "./components/LoginPage";
@@ -41,6 +42,7 @@ import SettingsDialog from "./components/SettingsDialog";
 import AccountsDialog from "./components/AccountsDialog";
 import SessionTimeoutWarning from "./components/SessionTimeoutWarning";
 import AppFooter from "./components/AppFooter";
+import { SPACING } from "./constants/spacing";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -83,8 +85,8 @@ const OverviewTabContent = React.memo<{}>(function OverviewTabContent() {
       </div>
       
       {/* Top Cards Section */}
-      <Box sx={{ mb: 4 }}>
-        <Grid container spacing={{ xs: 2, sm: 3 }}>
+      <Box sx={{ mb: SPACING.ROW }}>
+        <Grid container spacing={SPACING.CARD}>
           {/* Information Card - First on mobile, left side on desktop */}
           <Grid item xs={12} md={6} lg={4}>
             <InformationCard />
@@ -101,9 +103,36 @@ const OverviewTabContent = React.memo<{}>(function OverviewTabContent() {
           </Grid>
         </Grid>
       </Box>
+
+      {/* Second Row - System Temperatures and Recent Activity */}
+      <Box sx={{ mb: SPACING.ROW }}>
+        <Grid container spacing={SPACING.CARD}>
+          {/* System Temperatures - Left side */}
+          <Grid item xs={12} md={8}>
+            <HistoryChart showOnlySystemTemperatures />
+          </Grid>
+          
+          {/* Recent Activity - Right side */}
+          <Grid item xs={12} md={4}>
+            <RecentActivity />
+          </Grid>
+        </Grid>
+      </Box>
       
-      {/* Temperature History Chart */}
-      <HistoryChart />
+      {/* Third Row - Power Supply and Peripheral Temperatures */}
+      <Box sx={{ mb: SPACING.ROW }}>
+        <Grid container spacing={SPACING.CARD}>
+          {/* Power Supply Temperatures - Left side */}
+          <Grid item xs={12} md={6}>
+            <HistoryChart showOnlyPowerSupply />
+          </Grid>
+          
+          {/* Peripheral Temperatures - Right side */}
+          <Grid item xs={12} md={6}>
+            <HistoryChart showOnlyPeripheral />
+          </Grid>
+        </Grid>
+      </Box>
     </Box>
   );
 });
@@ -137,7 +166,7 @@ const ControlTabContent = React.memo<ControlTabContentProps>(function ControlTab
       <div id="tab-desc-2" className="sr-only">
         Fan speed control and system configuration options
       </div>
-      <FanControls onDebugLog={onDebugLog} />
+      <Controls onDebugLog={onDebugLog} />
     </Box>
   );
 });

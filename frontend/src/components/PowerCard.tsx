@@ -20,6 +20,7 @@ import {
   ThermostatOutlined as TempIcon 
 } from '@mui/icons-material';
 import { getPowerInformation, refreshPowerInformation, getILoStatus, type PowerInformation } from '../api';
+import { CARD_STYLES, getGridCardContainerProps } from '../constants/cardStyles';
 
 const PowerCard: React.FC = () => {
   const [powerInfo, setPowerInfo] = useState<PowerInformation | null>(null);
@@ -282,34 +283,14 @@ const PowerCard: React.FC = () => {
   if (loading) {
     return (
       <Card
-        variant="outlined"
-        sx={{
-          height: '100%',
-          border: `1px solid ${theme.palette.divider}`,
-          borderRadius: 3,
-          transition: 'all 0.2s ease-in-out',
-          '&:hover': {
-            borderColor: theme.palette.primary.main,
-            boxShadow: `0 8px 24px ${theme.palette.primary.main}15`
-          }
-        }}
+        {...getGridCardContainerProps(theme)}
       >
-        <CardContent sx={{ p: { xs: 3, sm: 4 }, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'flex-start',
-            mb: 3
-          }}>
+        <CardContent {...CARD_STYLES.CONTENT}>
+          <Box {...CARD_STYLES.HEADER}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <PowerIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+              <PowerIcon {...CARD_STYLES.HEADER_ICON} />
               <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 600,
-                  color: 'text.primary',
-                  fontSize: { xs: '1rem', sm: '1.125rem' }
-                }}
+                {...CARD_STYLES.TITLE}
               >
                 Power Monitoring
               </Typography>
@@ -333,29 +314,17 @@ const PowerCard: React.FC = () => {
   if (error) {
     return (
       <Card
-        variant="outlined"
+        {...getGridCardContainerProps(theme)}
         sx={{
-          height: '100%',
           border: `1px solid ${theme.palette.error.main}`,
-          borderRadius: 3,
         }}
       >
-        <CardContent sx={{ p: { xs: 3, sm: 4 }, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'flex-start',
-            mb: 3
-          }}>
+        <CardContent {...CARD_STYLES.CONTENT}>
+          <Box {...CARD_STYLES.HEADER}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <PowerIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+              <PowerIcon {...CARD_STYLES.HEADER_ICON} />
               <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 600,
-                  color: 'text.primary',
-                  fontSize: { xs: '1rem', sm: '1.125rem' }
-                }}
+                {...CARD_STYLES.TITLE}
               >
                 Power Monitoring
               </Typography>
@@ -377,9 +346,21 @@ const PowerCard: React.FC = () => {
             </Tooltip>
           </Box>
           
-          <Alert severity="error" sx={{ flex: 1 }}>
-            {error}
-          </Alert>
+          <Box sx={CARD_STYLES.EMPTY_STATE.sx}>
+            <Alert 
+              severity="error" 
+              sx={{ 
+                width: '100%',
+                justifyContent: 'center',
+                '& .MuiAlert-message': {
+                  textAlign: 'center',
+                  width: '100%'
+                }
+              }}
+            >
+              {error}
+            </Alert>
+          </Box>
         </CardContent>
       </Card>
     );
@@ -389,30 +370,14 @@ const PowerCard: React.FC = () => {
   if (!powerInfo && !loading) {
     return (
       <Card
-        variant="outlined"
-        sx={{
-          height: '100%',
-          border: `1px solid ${theme.palette.divider}`,
-          borderRadius: 3,
-          transition: 'all 0.2s ease-in-out'
-        }}
+        {...getGridCardContainerProps(theme)}
       >
-        <CardContent sx={{ p: { xs: 3, sm: 4 }, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'flex-start',
-            mb: 3
-          }}>
+        <CardContent {...CARD_STYLES.CONTENT}>
+          <Box {...CARD_STYLES.HEADER}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <PowerIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+              <PowerIcon {...CARD_STYLES.HEADER_ICON} />
               <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 600,
-                  color: 'text.primary',
-                  fontSize: { xs: '1rem', sm: '1.125rem' }
-                }}
+                {...CARD_STYLES.TITLE}
               >
                 Power Monitoring
               </Typography>
@@ -444,34 +409,14 @@ const PowerCard: React.FC = () => {
   // Show power information
   return (
     <Card
-      variant="outlined"
-      sx={{
-        height: '100%',
-        border: `1px solid ${theme.palette.divider}`,
-        borderRadius: 3,
-        transition: 'all 0.2s ease-in-out',
-        '&:hover': {
-          borderColor: theme.palette.primary.main,
-          boxShadow: `0 8px 24px ${theme.palette.primary.main}15`
-        }
-      }}
+      {...getGridCardContainerProps(theme)}
     >
-      <CardContent sx={{ p: { xs: 3, sm: 4 }, height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'flex-start',
-          mb: 3
-        }}>
+      <CardContent {...CARD_STYLES.CONTENT}>
+        <Box {...CARD_STYLES.HEADER}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <PowerIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+            <PowerIcon {...CARD_STYLES.HEADER_ICON} />
             <Typography
-              variant="h6"
-              sx={{
-                fontWeight: 600,
-                color: 'text.primary',
-                fontSize: { xs: '1rem', sm: '1.125rem' }
-              }}
+              {...CARD_STYLES.TITLE}
             >
               Power Monitoring
             </Typography>

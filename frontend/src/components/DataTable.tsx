@@ -43,6 +43,7 @@ interface DataTableProps {
   searchable?: boolean;
   searchPlaceholder?: string;
   originalDataLength?: number; // For external search to show "X of Y" format
+  headerActions?: React.ReactNode; // Custom actions to display in the header
 }
 
 // Status indicator component
@@ -132,7 +133,8 @@ export default function DataTable({
   emptyMessage = 'No data available',
   searchable = false,
   searchPlaceholder = 'Search...',
-  originalDataLength
+  originalDataLength,
+  headerActions
 }: DataTableProps) {
   const theme = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
@@ -152,7 +154,7 @@ export default function DataTable({
   const isExternallyFiltered = originalDataLength !== undefined && originalDataLength !== data.length;
 
   return (
-    <Box sx={{ mb: 4 }}>
+    <Box sx={{ mb: 3 }}>
       {/* Table Header */}
       <Box sx={{ 
         display: 'flex', 
@@ -274,6 +276,13 @@ export default function DataTable({
                 ),
               }}
             />
+          </Box>
+        )}
+        
+        {/* Custom Header Actions */}
+        {headerActions && (
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            {headerActions}
           </Box>
         )}
       </Box>

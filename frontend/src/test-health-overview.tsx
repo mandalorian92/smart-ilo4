@@ -1,28 +1,22 @@
-import React, { useEffect, useState } from "react";
-import { getSensors, getFans } from "../api";
+import React from "react";
 import { 
   Card, 
   CardContent, 
   Typography, 
-  CircularProgress,
   Box,
   useTheme,
   useMediaQuery,
-  Stack
 } from "@mui/material";
-import { CARD_STYLES, getGridCardContainerProps } from '../constants/cardStyles';
 
 // System Health Gauge with Pie Chart Component following System design guidelines
 function SystemHealthGauge({ 
   values, 
   total,
-  size = 280,
-  theme
+  size = 280
 }: {
   values: Array<{ value: number; color: string; label: string }>;
   total: number;
   size?: number;
-  theme: any;
 }) {
   const gaugeRadius = size / 2 - 30;
   const pieRadius = size / 3.2; // Increased from size / 4 to reduce gap
@@ -85,8 +79,8 @@ function SystemHealthGauge({
           <path
             d={`M ${polarToCartesian(center, center, gaugeRadius, -135).x} ${polarToCartesian(center, center, gaugeRadius, -135).y} A ${gaugeRadius} ${gaugeRadius} 0 1 1 ${polarToCartesian(center, center, gaugeRadius, 135).x} ${polarToCartesian(center, center, gaugeRadius, 135).y}`}
             fill="none"
-            stroke={theme.palette.divider}
-            strokeWidth="16"
+            stroke="#E0E0E0"
+            strokeWidth="12"
             strokeLinecap="round"
           />
           
@@ -95,11 +89,11 @@ function SystemHealthGauge({
             d={`M ${gaugeStart.x} ${gaugeStart.y} A ${gaugeRadius} ${gaugeRadius} 0 ${gaugeAngle > 180 ? 1 : 0} 1 ${gaugeEnd.x} ${gaugeEnd.y}`}
             fill="none"
             stroke={
-              healthyPercentage >= 90 ? theme.palette.success.main :
-              healthyPercentage >= 70 ? theme.palette.warning.main :
-              theme.palette.error.main
+              healthyPercentage >= 90 ? '#2E7D32' :
+              healthyPercentage >= 70 ? '#F57500' :
+              '#D32F2F'
             }
-            strokeWidth="16"
+            strokeWidth="12"
             strokeLinecap="round"
           />
           
@@ -136,7 +130,7 @@ function SystemHealthGauge({
             variant="h3" 
             sx={{ 
               fontWeight: 'bold',
-              color: 'text.primary',
+              color: 'white',
               fontSize: { xs: '1.5rem', sm: '2rem' },
               lineHeight: 1
             }}
@@ -146,7 +140,7 @@ function SystemHealthGauge({
           <Typography 
             variant="caption" 
             sx={{ 
-              color: 'text.secondary',
+              color: 'white',
               fontSize: { xs: '0.75rem', sm: '0.875rem' },
               textAlign: 'center',
               fontWeight: 500
@@ -210,102 +204,57 @@ function SystemHealthGauge({
   );
 }
 
-const SystemHealthOverview: React.FC = () => {
-  const [sensors, setSensors] = useState<any[]>([]);
-  const [fans, setFans] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  
+const TestSystemHealthOverview: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [sensorsData, fansData] = await Promise.all([
-          getSensors(),
-          getFans()
-        ]);
-        setSensors(sensorsData);
-        setFans(fansData);
-      } catch (error) {
-        console.error('Error fetching system health data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-    const interval = setInterval(fetchData, 30000); // Update every 30 seconds
-    return () => clearInterval(interval);
-  }, []);
-
-  // Calculate system health overview
-  const getSystemHealthStats = () => {
-    const tempSensors = sensors.filter(s => s.reading > 0);
-    const activeFans = fans.filter(f => f.status !== 'Absent');
-    
-    const criticalTemps = tempSensors.filter(s => s.critical && s.reading >= s.critical).length;
-    const warningTemps = tempSensors.filter(s => s.critical && s.reading >= (s.critical - 15)).length - criticalTemps;
-    const highSpeedFans = activeFans.filter(f => f.speed >= 85).length;
-    const failedFans = activeFans.filter(f => f.health !== 'OK').length;
-    
-    const totalIssues = criticalTemps + failedFans;
-    const totalWarnings = warningTemps + highSpeedFans;
-    const totalHealthy = (tempSensors.length - criticalTemps - warningTemps) + (activeFans.length - failedFans - highSpeedFans);
-    
-    return {
-      critical: totalIssues,
-      warning: totalWarnings,
-      healthy: totalHealthy,
-      total: tempSensors.length + activeFans.length
-    };
-  };
-
-  if (loading) {
-    return (
-      <Card {...getGridCardContainerProps(theme)}>
-        <CardContent {...CARD_STYLES.CONTENT}>
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
-            <CircularProgress />
-          </Box>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const healthStats = getSystemHealthStats();
-  const total = healthStats.total || 1; // Prevent division by zero
-  
-  // Prepare meter values for System Meter component
+  // Test data: 17 healthy, 5 warnings, 2 criticals (total 24)
   const meterValues = [
     {
-      value: healthStats.healthy,
-      color: theme.palette.success.main, // Theme green for healthy
+      value: 17, // Healthy components
+      color: '#2E7D32', // Green for healthy
       label: 'Healthy'
     },
     {
-      value: healthStats.warning,
-      color: theme.palette.warning.main, // Theme orange for warning
+      value: 5, // Warning components
+      color: '#F57500', // Orange for warning
       label: 'Warning'
     },
     {
-      value: healthStats.critical,
-      color: theme.palette.error.main, // Theme red for critical
+      value: 2, // Critical components
+      color: '#D32F2F', // Red for critical
       label: 'Critical'
     }
   ];
 
+  const total = 24;
+
   return (
     <Card
-      {...getGridCardContainerProps(theme)}
+      variant="outlined"
+      sx={{
+        height: '100%',
+        border: `1px solid ${theme.palette.divider}`,
+        borderRadius: 2,
+        transition: 'all 0.2s ease-in-out',
+        '&:hover': {
+          borderColor: theme.palette.primary.main,
+          boxShadow: `0 4px 12px ${theme.palette.primary.main}15`
+        }
+      }}
     >
-      <CardContent {...CARD_STYLES.CONTENT}>
+      <CardContent sx={{ p: { xs: 2, sm: 3 }, height: '100%', display: 'flex', flexDirection: 'column' }}>
         {/* Header */}
         <Box sx={{ mb: 3 }}>
           <Typography
-            {...CARD_STYLES.TITLE}
+            variant="h6"
+            sx={{
+              fontWeight: 600,
+              color: 'text.primary',
+              fontSize: { xs: '1rem', sm: '1.125rem' }
+            }}
           >
-            System Health Overview
+            System Health Overview (Test: 5 Warnings, 2 Critical)
           </Typography>
         </Box>
         
@@ -321,7 +270,6 @@ const SystemHealthOverview: React.FC = () => {
             values={meterValues}
             total={total}
             size={isMobile ? 250 : 320}
-            theme={theme}
           />
         </Box>
       </CardContent>
@@ -329,4 +277,4 @@ const SystemHealthOverview: React.FC = () => {
   );
 };
 
-export default SystemHealthOverview;
+export default TestSystemHealthOverview;

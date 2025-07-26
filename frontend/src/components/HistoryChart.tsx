@@ -18,6 +18,7 @@ import {
   FormControlLabel,
   useMediaQuery
 } from "@mui/material";
+import { SPACING } from '../constants/spacing';
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -62,7 +63,17 @@ type HistoryPoint = {
   sensors: { [sensorName: string]: number };
 };
 
-function HistoryChart() {
+function HistoryChart({ 
+  showOnlySystemTemperatures = false, 
+  showOnlyPowerSupplyAndPeripheral = false,
+  showOnlyPowerSupply = false,
+  showOnlyPeripheral = false
+}: {
+  showOnlySystemTemperatures?: boolean;
+  showOnlyPowerSupplyAndPeripheral?: boolean;
+  showOnlyPowerSupply?: boolean;
+  showOnlyPeripheral?: boolean;
+}) {
   const [historyData, setHistoryData] = useState<HistoryPoint[]>([]);
   const [availableSensors, setAvailableSensors] = useState<SensorInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -181,7 +192,7 @@ function HistoryChart() {
 
   if (historyData.length === 0) {
     return (
-      <Card sx={{ mb: 4 }}>
+      <Card sx={{ mb: SPACING.COMPONENT.LARGE }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>
             System Temperature
@@ -344,8 +355,17 @@ function HistoryChart() {
     sensors: SensorInfo[],
     isFirst: boolean = false
   ) => (
-    <Card sx={{ mb: 4 }}>
-      <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+    <Card sx={{ 
+      height: '450px', // Fixed height for consistency
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
+      <CardContent sx={{ 
+        p: { xs: 2, sm: 3 },
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%'
+      }}>
         <Box sx={{ 
           display: 'flex', 
           flexDirection: { xs: 'column', sm: 'row' },
@@ -385,8 +405,9 @@ function HistoryChart() {
         {sensors.length > 0 ? (
           <>
             <Box sx={{ 
-              height: { xs: 300, sm: 350, md: 400 },
-              position: 'relative'
+              height: { xs: 250, sm: 300, md: 350 },
+              position: 'relative',
+              flex: 1
             }}>
               <Line data={chartData} options={createChartOptions(title)} />
             </Box>
@@ -414,9 +435,17 @@ function HistoryChart() {
             )}
           </>
         ) : (
-          <Typography color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-            No sensors available for this category
-          </Typography>
+          <Box sx={{ 
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            flex: 1,
+            minHeight: 200
+          }}>
+            <Typography color="text.secondary" sx={{ textAlign: 'center' }}>
+              No sensors available for this category
+            </Typography>
+          </Box>
         )}
       </CardContent>
     </Card>
@@ -424,9 +453,24 @@ function HistoryChart() {
 
   return (
     <Box>
-      {renderTemperatureCard("System Temperatures", systemChartData, systemSensors, true)}
-      {renderTemperatureCard("Power Supply Temperatures", powerSupplyChartData, powerSupplySensors)}
-      {renderTemperatureCard("Peripheral Temperatures", peripheralChartData, peripheralSensors)}
+      {showOnlySystemTemperatures ? (
+        renderTemperatureCard("System Temperatures", systemChartData, systemSensors, true)
+      ) : showOnlyPowerSupply ? (
+        renderTemperatureCard("Power Supply Temperatures", powerSupplyChartData, powerSupplySensors)
+      ) : showOnlyPeripheral ? (
+        renderTemperatureCard("Peripheral Temperatures", peripheralChartData, peripheralSensors)
+      ) : showOnlyPowerSupplyAndPeripheral ? (
+        <>
+          {renderTemperatureCard("Power Supply Temperatures", powerSupplyChartData, powerSupplySensors)}
+          {renderTemperatureCard("Peripheral Temperatures", peripheralChartData, peripheralSensors)}
+        </>
+      ) : (
+        <>
+          {renderTemperatureCard("System Temperatures", systemChartData, systemSensors, true)}
+          {renderTemperatureCard("Power Supply Temperatures", powerSupplyChartData, powerSupplySensors)}
+          {renderTemperatureCard("Peripheral Temperatures", peripheralChartData, peripheralSensors)}
+        </>
+      )}
     </Box>
   );
 }
