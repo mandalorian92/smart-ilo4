@@ -5,8 +5,26 @@
 
 set -e
 
-# Colors for output
-RED='\033[0;31m'
+# C# Create LXC container
+create_container() {
+    print_step "Creating LXC container $CTID..."
+    
+    # Get the full template path
+    local template_path=$(ensure_template)
+    
+    pct create $CTID \
+        "$template_path" \
+        --hostname $HOSTNAME \
+        --memory $MEMORY \
+        --cores $CORES \
+        --rootfs $STORAGE_LOC:$STORAGE \
+        --net0 name=eth0,bridge=$BRIDGE,firewall=1,$IP_CONFIG \
+        --onboot 1 \
+        --unprivileged 1 \
+        --features nesting=1
+    
+    print_success "Container $CTID created"
+}RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
@@ -61,18 +79,52 @@ get_next_ctid() {
     echo $ctid
 }
 
+# Get available container storage
+get_container_storage() {
+    # Find storage that supports container images/rootfs
+    pvesm status -content images | tail -n +2 | awk '{print $1}' | head -1
+}
+
+# Get available template storage
+get_template_storage() {
+    # Find storage that supports templates
+    local template_storage=$(pvesm status -content vztmpl | tail -n +2 | awk '{print $1}' | head -1)
+    
+    if [ -z "$template_storage" ]; then
+        print_error "No storage found that supports templates!"
+        echo "Available storage:"
+        pvesm status
+        echo
+        echo "Please configure at least one storage to support 'VZDump backup file, VM templates' content types."
+        exit 1
+    fi
+    
+    echo "$template_storage"
+}
+
 # Download Debian template if not exists
 ensure_template() {
+    local template_storage=$(get_template_storage)
     local template="debian-12-standard_12.7-1_amd64.tar.zst"
     
-    if ! pveam list local | grep -q "$template"; then
-        print_step "Downloading Debian 12 template..."
+    print_info "Using storage '$template_storage' for templates"
+    
+    if ! pveam list "$template_storage" | grep -q "$template"; then
+        print_step "Downloading Debian 12 template to '$template_storage'..."
         pveam update
-        pveam download local "$template"
-        print_success "Template downloaded"
+        if ! pveam download "$template_storage" "$template"; then
+            print_error "Failed to download template to '$template_storage'"
+            echo "Available template storage:"
+            pvesm status -content vztmpl
+            exit 1
+        fi
+        print_success "Template downloaded to '$template_storage'"
     else
-        print_success "Debian 12 template already available"
+        print_success "Debian 12 template already available in '$template_storage'"
     fi
+    
+    # Return the full template path for use in container creation
+    echo "$template_storage:vztmpl/$template"
 }
 
 # Interactive configuration wizard
@@ -125,8 +177,17 @@ run_wizard() {
     fi
     
     # Storage location
-    read -p "Enter storage location [local-lvm]: " STORAGE_LOC
-    STORAGE_LOC=${STORAGE_LOC:-local-lvm}
+    echo
+    echo -e "${YELLOW}Storage Configuration:${NC}"
+    echo "Available container storage:"
+    pvesm status -content images | tail -n +2 | awk '{printf "  - %s\n", $1}'
+    echo
+    local suggested_storage=$(get_container_storage)
+    if [ -z "$suggested_storage" ]; then
+        suggested_storage="local-lvm"
+    fi
+    read -p "Enter storage location [$suggested_storage]: " STORAGE_LOC
+    STORAGE_LOC=${STORAGE_LOC:-$suggested_storage}
     
     # iLO4 Configuration
     echo
@@ -339,11 +400,11 @@ main() {
     # Check prerequisites
     check_proxmox
     
-    # Ensure template is available
-    ensure_template
-    
     # Run configuration wizard
     run_wizard
+    
+    # Ensure template is available (this will also return the template path)
+    ensure_template > /dev/null
     
     # Installation steps
     create_container

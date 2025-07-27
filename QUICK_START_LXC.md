@@ -9,6 +9,7 @@ curl -sSL https://raw.githubusercontent.com/mandalorian92/Smart-ilo4/main/instal
 ```
 
 **That's it!** The installer will:
+- 🔧 **Auto-detect storage** that supports templates
 - 🔧 Download Debian 12 template (if needed)
 - 🎮 Launch interactive setup wizard
 - 📦 Create optimized LXC container (1GB RAM, 1 CPU, 4GB storage)
@@ -23,6 +24,7 @@ curl -sSL https://raw.githubusercontent.com/mandalorian92/Smart-ilo4/main/instal
 - Memory (default: 1024MB)
 - CPU cores (default: 1)
 - Storage size (default: 4GB)
+- **Container storage** (auto-detected available options)
 - Network settings (DHCP or static)
 - **Your iLO4 credentials**
 - Application port (default: 8443)
