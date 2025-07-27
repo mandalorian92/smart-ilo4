@@ -1,6 +1,8 @@
 import { Server } from 'http';
 import app from './app.js';
 import { getCurrentPort } from './services/appConfig.js';
+import { centralizedDataFetcher } from './services/centralizedDataFetcher.js';
+import { isILoConfigured } from './services/config.js';
 
 let server: Server | null = null;
 let currentPort: number;
@@ -37,6 +39,7 @@ const stopServer = async (): Promise<void> => {
     return new Promise((resolve) => {
       server!.close(() => {
         console.log('Server stopped gracefully');
+        centralizedDataFetcher.stop(); // Stop the data fetcher
         resolve();
       });
     });
@@ -57,10 +60,25 @@ export const restartServer = async (newPort?: number): Promise<void> => {
 
 export const getCurrentServerPort = (): number => currentPort;
 
-// Initial server start
+// Initial server start and data fetcher initialization
 const initializeServer = async () => {
   try {
     server = await startServer();
+    
+    // Initialize centralized data fetcher if iLO is configured
+    try {
+      const configured = await isILoConfigured();
+      if (configured) {
+        console.log('iLO is configured, starting centralized data fetcher...');
+        centralizedDataFetcher.start();
+        console.log('Centralized data fetcher started on server startup');
+      } else {
+        console.log('iLO not yet configured, centralized data fetcher will start after setup completion');
+      }
+    } catch (error) {
+      console.error('Error checking iLO configuration status:', error);
+    }
+    
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);

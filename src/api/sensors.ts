@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { getSensors, overrideSensor, resetSensorOverrides, getSensorHistory, getActivePids, getAllPids } from "../services/ilo.js";
+import { getSensors, overrideSensor, resetSensorOverrides, getSensorHistory } from "../services/ilo.js";
+import { centralizedDataFetcher } from "../services/centralizedDataFetcher.js";
 import { runIloCommand } from "../services/sshClient.js";
 
 const router = Router();
@@ -17,22 +18,23 @@ router.get("/", async (_req, res) => {
 // GET /sensors/available — get list of available sensor names for filtering
 router.get("/available", async (_req, res) => {
   try {
-    const [sensors, activePids] = await Promise.all([getSensors(), getActivePids()]);
+    const sensors = await getSensors();
     
-    const sensorNames = sensors.map(sensor => ({
+    const sensorNames = sensors.map((sensor: any) => ({
       name: sensor.name,
       context: sensor.context || 'Unknown',
       currentReading: sensor.reading,
       isActive: sensor.reading > 0
     }));
     
-    // Add information about which sensors have active PIDs
-    const activePidNumbers = activePids.map(pid => pid.number);
+    // Get PID data from centralized fetcher
+    const pidResult = centralizedDataFetcher.getPidData();
+    const activePidNumbers = pidResult.data ? pidResult.data.filter((pid: any) => pid.isActive).map((pid: any) => pid.number) : [];
     
     res.json({
       sensors: sensorNames,
       activePidNumbers: activePidNumbers,
-      activePidCount: activePids.length
+      activePidCount: activePidNumbers.length
     });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
@@ -111,22 +113,60 @@ router.post("/set-low-limit", async (req, res) => {
   }
 });
 
-// GET /sensors/pids — get PID algorithm information
+// GET /sensors/pids — get PID algorithm information using centralized fetcher
 router.get("/pids", async (_req, res) => {
   try {
-    const allPids = await getAllPids();
-    res.json(allPids);
+    const result = centralizedDataFetcher.getPidData();
+    
+    if (result.error) {
+      console.error('Error getting all PIDs:', result.error);
+      return res.status(500).json({ error: result.error });
+    }
+    
+    if (!result.data) {
+      if (!centralizedDataFetcher.isRunning()) {
+        return res.status(500).json({ error: 'PID data service is not running. Please check iLO configuration.' });
+      }
+      
+      return res.json([]); // Return empty array if no data
+    }
+    
+    res.json(result.data);
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
 });
 
-// GET /sensors/active-pids — get only active PID algorithms (prev_drive > 0 or output > 0)
+// GET /sensors/active-pids — get only active PID algorithms using centralized fetcher
 router.get("/active-pids", async (_req, res) => {
   try {
-    const activePids = await getActivePids();
+    const result = centralizedDataFetcher.getPidData();
+    
+    if (result.error) {
+      console.error('Error getting active PIDs:', result.error);
+      return res.status(500).json({ error: result.error });
+    }
+    
+    if (!result.data) {
+      if (!centralizedDataFetcher.isRunning()) {
+        return res.status(500).json({ error: 'PID data service is not running. Please check iLO configuration.' });
+      }
+      
+      const lastUpdated = result.lastUpdated.getTime();
+      const now = new Date().getTime();
+      
+      if (now - lastUpdated < 30000) {
+        return res.status(202).json({ error: 'PID data still being fetched, this is normal during initial setup' });
+      }
+      
+      return res.json([]); // Return empty array if no data
+    }
+    
+    // Filter for active PIDs only
+    const activePids = result.data.filter((pid: any) => pid.isActive);
     res.json(activePids);
   } catch (err) {
+    console.error('Error getting active PIDs:', err);
     res.status(500).json({ error: (err as Error).message });
   }
 });

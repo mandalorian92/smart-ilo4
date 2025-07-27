@@ -446,13 +446,9 @@ function FanControlCard({ onDebugLog }: { onDebugLog?: (message: string) => void
                   <IconButton
                     onClick={handleRefresh}
                     disabled={refreshing || loading}
-                    size="small"
-                    sx={{
-                      color: 'text.secondary',
-                      '&:hover': { color: 'primary.main' }
-                    }}
+                    {...CARD_STYLES.REFRESH_BUTTON}
                   >
-                    {refreshing ? <CircularProgress size={16} /> : <RefreshIcon fontSize="small" />}
+                    {refreshing ? <CircularProgress size={16} /> : <RefreshIcon {...CARD_STYLES.REFRESH_ICON} />}
                   </IconButton>
                 </Tooltip>
                 

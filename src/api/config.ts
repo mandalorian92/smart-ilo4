@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getILoConfig, saveILoConfig, testILoConnection, isILoConfigured, clearILoConfig } from '../services/config.js';
 import { getSystemInformation } from '../services/systemInfo.js';
+import { centralizedDataFetcher } from '../services/centralizedDataFetcher.js';
 
 const router = Router();
 
@@ -35,16 +36,20 @@ router.post('/config', async (req, res) => {
     const config = { host, username, password };
     await saveILoConfig(config);
     
-    // Initialize system information cache after successful iLO configuration
-    console.log('iLO configuration saved, initializing system information cache...');
+    // Start the centralized data fetcher immediately after iLO configuration
+    console.log('iLO configuration saved, starting centralized data fetcher...');
+    centralizedDataFetcher.start();
+    console.log('Centralized data fetcher started successfully after iLO configuration');
+    
+    // Give the fetcher some time to complete its first fetch before testing the cache
     setTimeout(async () => {
       try {
         await getSystemInformation();
         console.log('System information cache initialized successfully after iLO configuration');
       } catch (error) {
-        console.error('Failed to initialize system information cache after iLO configuration:', error);
+        console.log('System information still being fetched, this is normal during initial setup');
       }
-    }, 1000); // Small delay to ensure configuration is fully persisted
+    }, 5000); // 5 second delay to allow first fetch to complete
     
     res.json({ success: true, message: 'iLO configuration saved successfully' });
   } catch (error) {

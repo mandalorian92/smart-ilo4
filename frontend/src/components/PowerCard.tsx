@@ -89,6 +89,9 @@ const PowerCard: React.FC = () => {
   useEffect(() => {
     console.log('PowerCard mounted, starting initial fetch...');
     const attemptFetch = async () => {
+      // Add small delay to avoid conflicts with centralized fetcher startup
+      await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
+      
       const success = await fetchPowerInfo();
       
       if (!success && !isIloConfigured) {
@@ -116,13 +119,13 @@ const PowerCard: React.FC = () => {
     }
   }, [retryCount, isIloConfigured, powerInfo, error, loading]);
 
-  // Auto-refresh every 10 seconds when configured
+  // Auto-refresh every 30 seconds when configured
   useEffect(() => {
     if (!isIloConfigured || !powerInfo) return;
 
     const interval = setInterval(() => {
       fetchPowerInfo(true);
-    }, 10000); // Refresh every 10 seconds
+    }, 30000); // Refresh every 30 seconds for responsive UI
 
     return () => clearInterval(interval);
   }, [isIloConfigured, powerInfo]);
@@ -333,15 +336,9 @@ const PowerCard: React.FC = () => {
               <IconButton
                 onClick={handleRefresh}
                 disabled={refreshing}
-                size="small"
-                sx={{
-                  color: 'primary.main',
-                  '&:hover': {
-                    backgroundColor: `${theme.palette.primary.main}10`
-                  }
-                }}
+                {...CARD_STYLES.REFRESH_BUTTON}
               >
-                <RefreshIcon sx={{ fontSize: 18 }} />
+                <RefreshIcon {...CARD_STYLES.REFRESH_ICON} />
               </IconButton>
             </Tooltip>
           </Box>
@@ -436,15 +433,9 @@ const PowerCard: React.FC = () => {
               <IconButton
                 onClick={handleRefresh}
                 disabled={refreshing}
-                size="small"
-                sx={{
-                  color: 'primary.main',
-                  '&:hover': {
-                    backgroundColor: `${theme.palette.primary.main}10`
-                  }
-                }}
+                {...CARD_STYLES.REFRESH_BUTTON}
               >
-                <RefreshIcon sx={{ fontSize: 18 }} />
+                <RefreshIcon {...CARD_STYLES.REFRESH_ICON} />
               </IconButton>
             </Tooltip>
           </Box>

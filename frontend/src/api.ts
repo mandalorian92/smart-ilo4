@@ -7,17 +7,17 @@ const API_BASE = process.env.REACT_APP_API_URL ||
 // Create axios instance with common configuration
 const api = axios.create({
   baseURL: API_BASE,
-  timeout: 10000,
+  timeout: 30000, // Increased to 30 seconds to allow backend time to fetch data
 });
 
 // Simple cache implementation for performance optimization
 const cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
 
 const CACHE_TTL = {
-  sensors: 30000,      // 30 seconds
-  fans: 30000,         // 30 seconds
-  systemInfo: 300000,  // 5 minutes
-  power: 30000,        // 30 seconds
+  sensors: 3 * 60 * 1000,      // 3 minutes to match backend
+  fans: 3 * 60 * 1000,         // 3 minutes
+  systemInfo: 3 * 60 * 1000,   // 3 minutes to match backend
+  power: 3 * 60 * 1000,        // 3 minutes to match backend
   history: 60000       // 1 minute
 };
 
@@ -47,21 +47,19 @@ export const invalidateCache = (keys?: string[]): void => {
   }
 };
 
-// Helper function for GET requests with caching
-const get = async (endpoint: string, cacheKey?: string, ttl?: number) => {
+// Helper function for GET requests with caching and optional AbortSignal
+const get = async (endpoint: string, cacheKey?: string, ttl?: number, options?: { signal?: AbortSignal }) => {
   if (cacheKey && ttl) {
     const cached = getCachedData(cacheKey);
     if (cached) {
       return cached;
     }
   }
-  
-  const res = await api.get(endpoint);
-  
+  const config = options && options.signal ? { signal: options.signal } : {};
+  const res = await api.get(endpoint, config);
   if (cacheKey && ttl) {
     setCachedData(cacheKey, res.data, ttl);
   }
-  
   return res.data;
 };
 
@@ -195,5 +193,5 @@ export const refreshPowerInformation = (): Promise<PowerInformation> => {
   return post('/api/power/refresh');
 };
 
-export const getRecentSystemLogs = (): Promise<SystemLogRecord[]> => 
-  get('/api/systemlog/recent', 'systemlogs', 30000); // 30 second cache
+export const getRecentSystemLogs = (options?: { signal?: AbortSignal }): Promise<SystemLogRecord[]> => 
+  get('/api/systemlog/recent', 'systemlogs', 30000, options); // 30 second cache

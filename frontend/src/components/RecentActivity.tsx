@@ -158,11 +158,24 @@ const RecentActivity: React.FC = () => {
         setLoading(true);
       }
       setError(null);
-      
-      const systemLogs = await getRecentSystemLogs();
+
+      // Add timeout logic (2 minutes = 120000ms)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000);
+      let systemLogs;
+      try {
+        systemLogs = await getRecentSystemLogs({ signal: controller.signal });
+      } catch (err: any) {
+        if (err.name === 'AbortError') {
+          throw new Error('Request timed out after 2 minutes');
+        }
+        throw err;
+      } finally {
+        clearTimeout(timeoutId);
+      }
       // Ensure we always have an array
       setLogs(Array.isArray(systemLogs) ? systemLogs : []);
-      
+
       if (showRefreshingState) {
         showNotification('success', 'Recent activity refreshed');
       }
@@ -172,7 +185,7 @@ const RecentActivity: React.FC = () => {
       setError(errorMessage);
       // Set logs to empty array on error
       setLogs([]);
-      
+
       if (showRefreshingState) {
         showNotification('error', errorMessage);
       }
@@ -183,14 +196,20 @@ const RecentActivity: React.FC = () => {
   }, [showNotification]);
 
   useEffect(() => {
-    fetchLogs();
+    // Add small delay to avoid conflicts with centralized fetcher startup
+    const initialDelay = setTimeout(() => {
+      fetchLogs();
+    }, 2000); // 2 second delay
     
-    // Set up auto-refresh every 2 minutes
+    // Set up auto-refresh every 30 seconds for responsive UI
     const interval = setInterval(() => {
       fetchLogs(true); // Show refreshing state for auto-refresh
-    }, 120000); // 2 minutes
+    }, 30000); // 30 seconds
     
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(initialDelay);
+      clearInterval(interval);
+    };
   }, [fetchLogs]);
 
   const handleManualRefresh = () => {
@@ -267,15 +286,9 @@ const RecentActivity: React.FC = () => {
               <IconButton
                 onClick={handleManualRefresh}
                 disabled={refreshing}
-                size="small"
-                sx={{
-                  color: 'primary.main',
-                  '&:hover': {
-                    backgroundColor: `${theme.palette.primary.main}10`
-                  }
-                }}
+                {...CARD_STYLES.REFRESH_BUTTON}
               >
-                {refreshing ? <CircularProgress size={16} /> : <RefreshIcon sx={{ fontSize: 18 }} />}
+                {refreshing ? <CircularProgress size={16} /> : <RefreshIcon {...CARD_STYLES.REFRESH_ICON} />}
               </IconButton>
             </Tooltip>
           </Box>
@@ -354,31 +367,50 @@ const RecentActivity: React.FC = () => {
             <IconButton
               onClick={handleManualRefresh}
               disabled={refreshing}
-              size="small"
-              sx={{
-                color: 'primary.main',
-                '&:hover': {
-                  backgroundColor: `${theme.palette.primary.main}10`
-                }
-              }}
+              {...CARD_STYLES.REFRESH_BUTTON}
             >
-              {refreshing ? <CircularProgress size={16} /> : <RefreshIcon sx={{ fontSize: 18 }} />}
+              {refreshing ? <CircularProgress size={16} /> : <RefreshIcon {...CARD_STYLES.REFRESH_ICON} />}
             </IconButton>
           </Tooltip>
         </Box>
 
         {/* Content */}
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ 
+          flex: 1, 
+          display: 'flex', 
+          flexDirection: 'column',
+          minHeight: 0 // Allow flex child to shrink below content size
+        }}>
           {Array.isArray(logs) && logs.length > 0 ? (
-            <Stack spacing={0}>
-              {logs.map((record, index) => (
-                <ActivityItem 
-                  key={`${record.number}-${index}`} 
-                  record={record} 
-                  theme={theme}
-                />
-              ))}
-            </Stack>
+            <Box sx={{
+              flex: 1,
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              '&::-webkit-scrollbar': {
+                width: '6px',
+              },
+              '&::-webkit-scrollbar-track': {
+                background: theme.palette.mode === 'dark' ? '#1a1a1a' : '#f5f5f5',
+                borderRadius: '3px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: theme.palette.mode === 'dark' ? '#555' : '#c1c1c1',
+                borderRadius: '3px',
+                '&:hover': {
+                  background: theme.palette.mode === 'dark' ? '#777' : '#a8a8a8',
+                },
+              },
+            }}>
+              <Stack spacing={0}>
+                {logs.map((record, index) => (
+                  <ActivityItem 
+                    key={`${record.number}-${index}`} 
+                    record={record} 
+                    theme={theme}
+                  />
+                ))}
+              </Stack>
+            </Box>
           ) : (
             <Box sx={CARD_STYLES.EMPTY_STATE.sx}>
               <HistoryIcon sx={CARD_STYLES.EMPTY_STATE_ICON.sx} />

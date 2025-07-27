@@ -84,6 +84,28 @@ export const CARD_STYLES = {
     }
   },
 
+  // Manual refresh button properties (standardized across all cards)
+  REFRESH_BUTTON: {
+    size: 'small' as const,
+    sx: {
+      color: 'primary.main',
+      '&:hover': {
+        backgroundColor: 'primary.main',
+        opacity: 0.1
+      },
+      '&:disabled': {
+        color: 'text.disabled'
+      }
+    }
+  },
+
+  // Refresh icon properties (consistent sizing)
+  REFRESH_ICON: {
+    sx: {
+      fontSize: 18
+    }
+  },
+
   // Empty state properties (centered no data display)
   EMPTY_STATE: {
     sx: {

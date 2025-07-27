@@ -456,7 +456,7 @@ function Dashboard() {
     const interval = setInterval(() => {
       // Don't show loading on updates, just update data silently
       fetchData();
-    }, 5000); // Update every 5 seconds for faster updates
+    }, 30000); // Update every 30 seconds for responsive UI
     return () => clearInterval(interval);
   }, [fetchData]);
 

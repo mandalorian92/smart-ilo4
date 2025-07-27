@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getHistory, getAvailableSensors, getActivePids } from "../api";
+import { getHistory, getAvailableSensors } from "../api";
 import { 
   Card, 
   CardContent, 
@@ -160,10 +160,9 @@ function HistoryChart({
   useEffect(() => {
     async function fetchData() {
       try {
-        const [histData, sensorsResponse, activePids] = await Promise.all([
+        const [histData, sensorsResponse] = await Promise.all([
           getHistory(),
-          getAvailableSensors(),
-          getActivePids()
+          getAvailableSensors()
         ]);
         
         setHistoryData(histData);
@@ -184,7 +183,7 @@ function HistoryChart({
     const interval = setInterval(() => {
       // Update silently without changing selected sensors
       fetchData();
-    }, 60000); // Update every minute to match backend collection interval
+    }, 60000); // Update every 1 minute for sensor data
     return () => clearInterval(interval);
   }, [isInitialLoad]);
 
