@@ -32,7 +32,7 @@ import Controls from "./components/Controls";
 import DebugTerminal from "./components/DebugTerminal";
 import InformationCard from "./components/InformationCard";
 import PowerCard from "./components/PowerCard";
-import SystemHealthOverview from "./components/SystemHealthOverview";
+import SensorsHealthOverview from "./components/SensorsHealthOverview";
 import RecentActivity from "./components/RecentActivity";
 import SplashScreen from "./components/SplashScreen";
 import SystemLogo from "./components/SystemLogo";
@@ -99,7 +99,7 @@ const OverviewTabContent = React.memo<{}>(function OverviewTabContent() {
           
           {/* System Health Overview Card - Third on mobile, right side on desktop */}
           <Grid item xs={12} md={12} lg={4}>
-            <SystemHealthOverview />
+            <SensorsHealthOverview />
           </Grid>
         </Grid>
       </Box>

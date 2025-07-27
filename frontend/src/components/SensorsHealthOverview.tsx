@@ -210,7 +210,7 @@ function SystemHealthGauge({
   );
 }
 
-const SystemHealthOverview: React.FC = () => {
+const SensorsHealthOverview: React.FC = () => {
   const [sensors, setSensors] = useState<any[]>([]);
   const [fans, setFans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -305,7 +305,7 @@ const SystemHealthOverview: React.FC = () => {
           <Typography
             {...CARD_STYLES.TITLE}
           >
-            System Health Overview
+            Sensors Health Overview
           </Typography>
         </Box>
         
@@ -329,4 +329,4 @@ const SystemHealthOverview: React.FC = () => {
   );
 };
 
-export default SystemHealthOverview;
+export default SensorsHealthOverview;
