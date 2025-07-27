@@ -13,6 +13,7 @@ import configRouter from "./api/config.js";
 import appConfigRouter from "./api/appConfig.js";
 import systemLogRouter from "./api/systemLog.js";
 import statusRouter from "./api/status.js";
+import debugRouter from "./api/debug.js";
 
 // ES module equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -44,6 +45,7 @@ app.use("/api/app", appConfigRouter);
 app.use("/api/power", powerRouter);
 app.use("/api/systemlog", systemLogRouter);
 app.use("/api/status", statusRouter);
+app.use("/api/debug", debugRouter);
 
 // Serve static files from frontend build
 app.use(express.static(path.join(__dirname, "../frontend/build")));

@@ -3,6 +3,8 @@ import app from './app.js';
 import { getCurrentPort } from './services/appConfig.js';
 import { centralizedDataFetcher } from './services/centralizedDataFetcher.js';
 import { isILoConfigured } from './services/config.js';
+// Initialize log capture service
+import './services/logger.js';
 
 let server: Server | null = null;
 let currentPort: number;

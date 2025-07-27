@@ -258,7 +258,7 @@ function Controls({ onDebugLog }: { onDebugLog?: (message: string) => void }) {
 
       {/* First Row - Fan Control Presets */}
       <Box sx={{ mb: SPACING.ROW }}>
-        <FanControls onDebugLog={onDebugLog} />
+        <FanControls />
       </Box>
 
       {/* Second Row - Sensor Configuration */}

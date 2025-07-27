@@ -29,7 +29,7 @@ import ActionsMenu from "./components/ActionsMenu";
 import Dashboard from "./components/Dashboard";
 import HistoryChart from "./components/HistoryChart";
 import Controls from "./components/Controls";
-import DebugTerminal from "./components/DebugTerminal";
+import Terminal from "./components/DebugTerminal";
 import InformationCard from "./components/InformationCard";
 import PowerCard from "./components/PowerCard";
 import SensorsHealthOverview from "./components/SensorsHealthOverview";
@@ -153,10 +153,10 @@ const MonitoringTabContent = React.memo<{}>(function MonitoringTabContent() {
 });
 
 interface ControlTabContentProps {
-  onDebugLog: (message: string) => void;
+  // Remove onDebugLog prop since we're not using debug logs anymore
 }
 
-const ControlTabContent = React.memo<ControlTabContentProps>(function ControlTabContent({ onDebugLog }) {
+const ControlTabContent = React.memo<ControlTabContentProps>(function ControlTabContent() {
   return (
     <Box 
       role="tabpanel"
@@ -166,16 +166,16 @@ const ControlTabContent = React.memo<ControlTabContentProps>(function ControlTab
       <div id="tab-desc-2" className="sr-only">
         Fan speed control and system configuration options
       </div>
-      <Controls onDebugLog={onDebugLog} />
+      <Controls />
     </Box>
   );
 });
 
-interface DebugTabContentProps {
-  debugLogs: string[];
+interface LogsTabContentProps {
+  // No props needed since Terminal component fetches its own data
 }
 
-const DebugTabContent = React.memo<DebugTabContentProps>(function DebugTabContent({ debugLogs }) {
+const LogsTabContent = React.memo<LogsTabContentProps>(function LogsTabContent() {
   return (
     <Box 
       role="tabpanel"
@@ -183,9 +183,9 @@ const DebugTabContent = React.memo<DebugTabContentProps>(function DebugTabConten
       aria-describedby="tab-desc-3"
     >
       <div id="tab-desc-3" className="sr-only">
-        Debug terminal showing system logs and diagnostic information
+        Backend application logs and system messages
       </div>
-      <DebugTerminal debugLogs={debugLogs} />
+      <Terminal />
     </Box>
   );
 });
@@ -202,7 +202,6 @@ function AppContent() {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
   const [tabValue, setTabValue] = useState(0);
-  const [debugLogs, setDebugLogs] = useState<string[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [accountsOpen, setAccountsOpen] = useState(false);
   
@@ -210,10 +209,6 @@ function AppContent() {
 
   const handleTabChange = (event: React.SyntheticEvent<Element, Event>, newValue: number) => {
     setTabValue(newValue);
-  };
-
-  const handleDebugLog = (message: string) => {
-    setDebugLogs((prev: string[]) => [...prev, message].slice(-20)); // Keep last 20 logs
   };
 
   // Define tab configuration following design guidelines
@@ -234,10 +229,9 @@ function AppContent() {
       description: 'Fan speed control and configuration'
     },
     { 
-      label: 'Debug', 
+      label: 'Logs', 
       icon: <DebugIcon sx={{ fontSize: { xs: 18, sm: 20 } }} />, 
-      description: 'Debug terminal and system logs',
-      badge: debugLogs.length > 0 ? debugLogs.length : undefined
+      description: 'Backend logs and system messages'
     }
   ];
 
@@ -463,11 +457,11 @@ function AppContent() {
             </TabPanel>
 
             <TabPanel value={tabValue} index={2}>
-              <ControlTabContent onDebugLog={handleDebugLog} />
+              <ControlTabContent />
             </TabPanel>
 
             <TabPanel value={tabValue} index={3}>
-              <DebugTabContent debugLogs={debugLogs} />
+              <LogsTabContent />
             </TabPanel>
           </Box>
         </Container>

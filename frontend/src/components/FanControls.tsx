@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { 
   getSensors, 
   getFans, 
+  getFansFresh,
   setAllFanSpeeds,
   unlockFanControl,
   lockFanAtSpeed,
@@ -38,7 +39,7 @@ import { SPACING } from '../constants/spacing';
 import { CARD_STYLES, getCardContainerProps, getNestedCardProps } from '../constants/cardStyles';
 
 // Quick Presets Component - Separate card for preset buttons
-function FanPresets({ onDebugLog }: { onDebugLog?: (message: string) => void }) {
+function FanPresets() {
   const [fans, setFans] = useState<any[]>([]);
   const [fanSpeeds, setFanSpeeds] = useState<Record<string, number>>({});
   const [globalSpeed, setGlobalSpeed] = useState(25);
@@ -48,22 +49,20 @@ function FanPresets({ onDebugLog }: { onDebugLog?: (message: string) => void }) 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const addDebugLog = (message: string) => {
-    const timestamp = new Date().toLocaleTimeString();
-    const logMessage = `[${timestamp}] ${message}`;
-    
-    if (onDebugLog) {
-      onDebugLog(logMessage);
-    }
-  };
-
   useEffect(() => {
     fetchFans();
+    
+    // Set up automatic refresh every 30 seconds for responsive UI
+    const interval = setInterval(() => {
+      fetchFans();
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
-  const fetchFans = async () => {
+  const fetchFans = async (bustCache = false) => {
     try {
-      const data = await getFans();
+      const data = bustCache ? await getFansFresh() : await getFans();
       setFans(data);
       const speeds: Record<string, number> = {};
       data.forEach((fan: any) => {
@@ -86,19 +85,21 @@ function FanPresets({ onDebugLog }: { onDebugLog?: (message: string) => void }) 
       setFanSpeeds(newSpeeds);
       
       const presetName = speed === 20 ? 'Quiet' : speed === 45 ? 'Normal' : 'Turbo';
-      addDebugLog(`${presetName} preset applied - setting all fans to ${speed}%`);
       
       // Apply to system
       await setAllFanSpeeds(speed);
       showNotification('success', `${presetName} preset applied (${speed}%)`);
       
-      // Refresh fan data
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      await fetchFans();
+      // Wait for iLO to process changes
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Invalidate cache and refresh fan data with fresh data
+      await invalidateFanCache();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await fetchFans(true); // Force cache-busting refresh
       
     } catch (error) {
       const errorMsg = (error as any).response?.data?.error || (error as Error).message;
-      addDebugLog(`✗ Error: ${errorMsg}`);
       showNotification('error', `Failed to apply preset: ${errorMsg}`);
     } finally {
       setLoading(false);
@@ -213,14 +214,13 @@ function FanPresets({ onDebugLog }: { onDebugLog?: (message: string) => void }) 
 }
 
 // Individual Fan Controls Component - Separate card for detailed fan control
-function FanControlCard({ onDebugLog }: { onDebugLog?: (message: string) => void }) {
+function FanControlCard() {
   const [fans, setFans] = useState<any[]>([]);
   const [fanSpeeds, setFanSpeeds] = useState<Record<string, number>>({});
   const [editAllMode, setEditAllMode] = useState(true);
   const [globalSpeed, setGlobalSpeed] = useState(25);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [debugLogs, setDebugLogs] = useState<string[]>([]);
   const [userInteracting, setUserInteracting] = useState<Record<string, boolean>>({});
   
   const theme = useTheme();
@@ -228,19 +228,16 @@ function FanControlCard({ onDebugLog }: { onDebugLog?: (message: string) => void
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
   const { showNotification } = useNotifications();
 
-  const addDebugLog = (message: string) => {
-    const timestamp = new Date().toLocaleTimeString();
-    const logMessage = `[${timestamp}] ${message}`;
-    setDebugLogs(prev => [...prev, logMessage].slice(-20)); // Keep last 20 logs
-    
-    // Call the external callback if provided
-    if (onDebugLog) {
-      onDebugLog(logMessage);
-    }
-  };
-
   useEffect(() => {
     fetchFans().finally(() => setLoading(false));
+    
+    // Set up automatic refresh every 30 seconds for responsive UI
+    const interval = setInterval(() => {
+      // Don't show loading on automatic updates, just update data silently
+      fetchFans();
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const handleFanSpeedChange = (fanName: string, speed: number) => {
@@ -278,8 +275,6 @@ function FanControlCard({ onDebugLog }: { onDebugLog?: (message: string) => void
     
     // Add debug logging for preset application
     const presetName = speed === 20 ? 'Quiet' : speed === 45 ? 'Normal' : 'Turbo';
-    addDebugLog(`${presetName} preset applied - setting all fans to ${speed}%`);
-    addDebugLog(`Edit All mode automatically enabled for preset application`);
     
     // Show notification
     showNotification('success', `${presetName} preset applied (${speed}%)`);
@@ -288,44 +283,32 @@ function FanControlCard({ onDebugLog }: { onDebugLog?: (message: string) => void
   const handleUpdate = async () => {
     try {
       setLoading(true);
-      addDebugLog('Starting fan speed update...');
       
       if (editAllMode) {
         // If in edit all mode, set all fans to the global speed
-        addDebugLog(`Setting all fans to ${globalSpeed}% (PWM: ${Math.round((globalSpeed / 100) * 255)})`);
         await setAllFanSpeeds(globalSpeed);
-        addDebugLog('✓ All fans updated successfully');
         showNotification('success', `All fans set to ${globalSpeed}%`);
       } else {
         // Set individual fan speeds
-        addDebugLog('Setting individual fan speeds:');
         for (const [fanName, speed] of Object.entries(fanSpeeds)) {
           const fanIndex = fans.findIndex(f => f.name === fanName);
           if (fanIndex >= 0) {
-            const pwmValue = Math.round((speed / 100) * 255);
-            addDebugLog(`- Fan ${fanIndex} (${fanName}): ${speed}% (PWM: ${pwmValue})`);
             await lockFanAtSpeed(fanIndex, speed);
           }
         }
-        addDebugLog('✓ Individual fan speeds updated successfully');
         showNotification('success', 'Fan speeds updated successfully');
       }
       
       // Wait a moment for iLO to process the changes, then refresh fan data
-      addDebugLog('Waiting for iLO to process changes...');
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+      await new Promise(resolve => setTimeout(resolve, 1500)); // Wait 1.5 seconds
       
-      addDebugLog('Invalidating backend cache...');
       await invalidateFanCache();
       
-      addDebugLog('Refreshing fan data...');
-      // Wait a bit longer for iLO to settle, then refresh
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Additional 1 second wait
+      // Wait a bit for iLO to settle, then refresh
+      await new Promise(resolve => setTimeout(resolve, 500)); // Reduced wait time
       await fetchFans(true, true); // Get fresh data, indicate this is after an update
-      addDebugLog('✓ Fan data refreshed');
     } catch (error) {
       const errorMsg = (error as any).response?.data?.error || (error as Error).message;
-      addDebugLog(`✗ Error: ${errorMsg}`);
       console.error('Failed to update fan speeds:', error);
       showNotification('error', `Failed to update fan speeds: ${errorMsg}`);
     } finally {
@@ -336,14 +319,10 @@ function FanControlCard({ onDebugLog }: { onDebugLog?: (message: string) => void
   const handleUnlock = async () => {
     try {
       setLoading(true);
-      addDebugLog('Unlocking fan control via SSH...');
-      addDebugLog('SSH Command: fan p global unlock');
       await unlockFanControl();
-      addDebugLog('✓ Fan control unlocked successfully');
       showNotification('success', 'Fan control unlocked successfully');
     } catch (error) {
       const errorMsg = (error as any).response?.data?.error || (error as Error).message;
-      addDebugLog(`✗ Unlock error: ${errorMsg}`);
       console.error('Failed to unlock fan control:', error);
       showNotification('error', `Failed to unlock fan control: ${errorMsg}`);
     } finally {
@@ -353,14 +332,11 @@ function FanControlCard({ onDebugLog }: { onDebugLog?: (message: string) => void
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    addDebugLog('Refreshing fan data...');
     try {
       await fetchFans(true); // Bust cache to get fresh data
       showNotification('success', 'Fan data refreshed successfully');
-      addDebugLog('✓ Fan data refreshed successfully');
     } catch (error) {
       const errorMsg = (error as any).response?.data?.error || (error as Error).message;
-      addDebugLog(`✗ Refresh error: ${errorMsg}`);
       console.error('Failed to refresh fan data:', error);
       showNotification('error', `Failed to refresh fan data: ${errorMsg}`);
     } finally {
@@ -370,9 +346,8 @@ function FanControlCard({ onDebugLog }: { onDebugLog?: (message: string) => void
 
   const fetchFans = async (bustCache = false, isAfterUpdate = false) => {
     try {
-      // Add cache busting parameter when needed
-      const url = bustCache ? `/fans?_t=${Date.now()}` : '/fans';
-      const data = await getFans();
+      // Use fresh data API when cache busting is requested
+      const data = bustCache ? await getFansFresh() : await getFans();
       setFans(data);
       
       const speeds: Record<string, number> = {};
@@ -392,7 +367,6 @@ function FanControlCard({ onDebugLog }: { onDebugLog?: (message: string) => void
       if (isAfterUpdate && editAllMode) {
         // In Edit All mode after update, set all fan speeds to match the global speed
         // This prevents the "drift" issue where one slider shows different value
-        addDebugLog(`Edit All mode: synchronizing all sliders to ${globalSpeed}%`);
         data.forEach((fan: any) => {
           // Only sync non-interacting sliders
           if (!userInteracting[fan.name]) {
@@ -415,7 +389,6 @@ function FanControlCard({ onDebugLog }: { onDebugLog?: (message: string) => void
         }
       }
     } catch (error) {
-      addDebugLog(`✗ Failed to fetch fans: ${(error as Error).message}`);
       console.error('Failed to fetch fans:', error);
     }
   };
@@ -829,7 +802,7 @@ function SensorConfiguration() {
 export { FanPresets, FanControlCard, SensorConfiguration };
 
 // For backward compatibility, export a combined component
-export default function FanControls({ onDebugLog }: { onDebugLog?: (message: string) => void }) {
+export default function FanControls() {
   return (
     <Box sx={{ 
       display: 'flex', 
@@ -837,8 +810,8 @@ export default function FanControls({ onDebugLog }: { onDebugLog?: (message: str
       gap: SPACING.ROW,
       width: '100%' 
     }}>
-      <FanPresets onDebugLog={onDebugLog} />
-      <FanControlCard onDebugLog={onDebugLog} />
+      <FanPresets />
+      <FanControlCard />
       <SensorConfiguration />
     </Box>
   );

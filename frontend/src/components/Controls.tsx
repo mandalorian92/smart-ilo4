@@ -9,7 +9,7 @@ import { SPACING } from '../constants/spacing';
 import { FanPresets, FanControlCard, SensorConfiguration } from './FanControls';
 
 // Main Controls component with proper two-row layout
-function Controls({ onDebugLog }: { onDebugLog?: (message: string) => void }) {
+function Controls() {
   const theme = useTheme();
   
   return (
@@ -18,12 +18,12 @@ function Controls({ onDebugLog }: { onDebugLog?: (message: string) => void }) {
       <Grid container spacing={SPACING.CARD} rowSpacing={SPACING.ROW} sx={{ width: '100%' }}>
         {/* First Row - Quick Presets (full width) */}
         <Grid item xs={12}>
-          <FanPresets onDebugLog={onDebugLog} />
+          <FanPresets />
         </Grid>
 
         {/* Second Row - Fan Control (full width) */}
         <Grid item xs={12}>
-          <FanControlCard onDebugLog={onDebugLog} />
+          <FanControlCard />
         </Grid>
         
         {/* Third Row - Sensor Configuration (full width) */}

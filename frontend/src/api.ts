@@ -87,6 +87,11 @@ export const resetSensors = () => {
 
 // Fan API (with caching optimization and extended timeouts for SSH operations)
 export const getFans = () => get('/fans', 'fans', CACHE_TTL.fans);
+export const getFansFresh = () => {
+  // Force fresh data by bypassing cache
+  invalidateCache(['fans']);
+  return get('/fans');
+};
 export const overrideFan = (fanId: string, speed: number) => {
   invalidateCache(['fans']);
   return post('/fans/override', { fanId, speed }, 30000); // 30 second timeout for fan operations
@@ -129,6 +134,22 @@ export const getSystemInformation = (): Promise<SystemInformation> =>
 export const refreshSystemInformation = (): Promise<SystemInformation> => {
   invalidateCache(['systemInfo']);
   return post('/api/system/info/refresh');
+};
+
+// Backend Logs API
+export interface LogEntry {
+  timestamp: string;
+  level: 'info' | 'warn' | 'error';
+  message: string;
+}
+
+export const getBackendLogs = (): Promise<LogEntry[]> => 
+  get('/api/debug/logs');
+export const getRecentBackendLogs = (count?: number): Promise<LogEntry[]> => 
+  get(`/api/debug/logs/recent${count ? `?count=${count}` : ''}`);
+export const clearBackendLogs = () => {
+  const config = { method: 'DELETE' };
+  return api.delete('/api/debug/logs').then(res => res.data);
 };
 
 // iLO Configuration API
