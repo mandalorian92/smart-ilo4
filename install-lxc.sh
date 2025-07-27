@@ -5,26 +5,8 @@
 
 set -e
 
-# C# Create LXC container
-create_container() {
-    print_step "Creating LXC container $CTID..."
-    
-    # Get the full template path
-    local template_path=$(ensure_template)
-    
-    pct create $CTID \
-        "$template_path" \
-        --hostname $HOSTNAME \
-        --memory $MEMORY \
-        --cores $CORES \
-        --rootfs $STORAGE_LOC:$STORAGE \
-        --net0 name=eth0,bridge=$BRIDGE,firewall=1,$IP_CONFIG \
-        --onboot 1 \
-        --unprivileged 1 \
-        --features nesting=1
-    
-    print_success "Container $CTID created"
-}RED='\033[0;31m'
+# Colors for output
+RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
@@ -228,8 +210,11 @@ run_wizard() {
 create_container() {
     print_step "Creating LXC container $CTID..."
     
+    # Get the full template path
+    local template_path=$(ensure_template)
+    
     pct create $CTID \
-        local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst \
+        "$template_path" \
         --hostname $HOSTNAME \
         --memory $MEMORY \
         --cores $CORES \
