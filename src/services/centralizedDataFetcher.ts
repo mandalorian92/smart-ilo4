@@ -17,6 +17,8 @@ interface CachedData {
   systemInfo: SystemInformation | null;
   pidData: PidInfo[];
   lastUpdated: Date;
+  lastRecordNumbers: number[]; // Track record numbers for smart caching
+  cachedLogData: Map<number, SystemLogRecord>; // Cache individual log records
   errors: {
     systemLogs?: string;
     powerInfo?: string;
@@ -32,6 +34,8 @@ class CentralizedDataFetcher {
     systemInfo: null,
     pidData: [],
     lastUpdated: new Date(0),
+    lastRecordNumbers: [],
+    cachedLogData: new Map(),
     errors: {}
   };
   
@@ -132,25 +136,72 @@ class CentralizedDataFetcher {
       if (recordNumbers.length === 0) {
         console.warn('No log records found in system log');
         this.cache.systemLogs = [];
+        this.cache.lastRecordNumbers = [];
         return;
       }
       
       // Get the last 5 records (increased from 3 for better data)
       const recentRecords = recordNumbers.slice(-5);
+      
+      // Smart caching: check if record numbers have changed
+      const recordsChanged = !this.arraysEqual(recentRecords, this.cache.lastRecordNumbers);
+      
+      if (!recordsChanged) {
+        console.log('Log record numbers unchanged, using cached data');
+        return; // No need to fetch, data hasn't changed
+      }
+      
+      console.log(`Log records changed from [${this.cache.lastRecordNumbers.join(', ')}] to [${recentRecords.join(', ')}]`);
+      
+      // Determine which records are new and need fetching
+      const cachedRecords = new Set(this.cache.lastRecordNumbers);
+      const newRecords = recentRecords.filter(num => !cachedRecords.has(num));
+      
+      console.log(`Found ${newRecords.length} new records to fetch: [${newRecords.join(', ')}]`);
+      
+      // Fetch only new records
       const logRecords: SystemLogRecord[] = [];
       
       for (const recordNumber of recentRecords) {
         try {
-          const recordOutput = await runIloCommand(`show system1/log1/record${recordNumber}`);
-          const record = this.parseLogRecord(recordOutput, recordNumber);
+          let record: SystemLogRecord | null = null;
+          
+          if (newRecords.includes(recordNumber)) {
+            // Fetch new record from iLO
+            console.log(`Fetching new record ${recordNumber}...`);
+            const recordOutput = await runIloCommand(`show system1/log1/record${recordNumber}`);
+            record = this.parseLogRecord(recordOutput, recordNumber);
+            
+            if (record) {
+              // Cache the new record
+              this.cache.cachedLogData.set(recordNumber, record);
+            }
+            
+            // Small delay between records to avoid overwhelming iLO
+            await new Promise(resolve => setTimeout(resolve, 500));
+          } else {
+            // Use cached record
+            record = this.cache.cachedLogData.get(recordNumber) || null;
+            if (record) {
+              console.log(`Using cached record ${recordNumber}`);
+            }
+          }
+          
           if (record) {
             logRecords.push(record);
           }
-          // Small delay between records to avoid overwhelming iLO
-          await new Promise(resolve => setTimeout(resolve, 500));
         } catch (error) {
           console.error(`Failed to fetch record ${recordNumber}:`, error);
           // Continue with other records
+        }
+      }
+      
+      // Clean up old cached records that are no longer in the recent 5
+      const recentRecordsSet = new Set(recentRecords);
+      for (const [cachedRecordNum] of this.cache.cachedLogData) {
+        if (!recentRecordsSet.has(cachedRecordNum)) {
+          this.cache.cachedLogData.delete(cachedRecordNum);
+          console.log(`Removed old cached record ${cachedRecordNum}`);
         }
       }
       
@@ -166,12 +217,14 @@ class CentralizedDataFetcher {
       });
       
       this.cache.systemLogs = sortedRecords;
-      console.log(`Successfully fetched ${sortedRecords.length} system log records`);
+      this.cache.lastRecordNumbers = recentRecords; // Update the tracked record numbers
+      console.log(`Successfully processed ${sortedRecords.length} system log records (${newRecords.length} newly fetched, ${sortedRecords.length - newRecords.length} from cache)`);
       
     } catch (error) {
       console.error('Error fetching system logs:', error);
       this.cache.errors.systemLogs = error instanceof Error ? error.message : 'Unknown error';
       this.cache.systemLogs = [];
+      this.cache.lastRecordNumbers = [];
     }
   }
 
@@ -303,6 +356,11 @@ class CentralizedDataFetcher {
   }
 
   // Helper methods (copied from existing services)
+  private arraysEqual(a: number[], b: number[]): boolean {
+    if (a.length !== b.length) return false;
+    return a.every((val, index) => val === b[index]);
+  }
+
   private extractRecordNumbers(output: string): number[] {
     const lines = output.split('\n');
     const recordNumbers: number[] = [];
