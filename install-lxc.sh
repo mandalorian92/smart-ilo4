@@ -270,13 +270,13 @@ deploy_application() {
     pct exec $CTID -- su - smartilo4 -c "git clone https://github.com/mandalorian92/Smart-ilo4.git"
     
     # Create environment file
-    pct exec $CTID -- su - smartilo4 -c "cat > Smart-ilo4/.env << EOF
+    pct exec $CTID -- su - smartilo4 -c "cat > Smart-ilo4/.env << 'ENVEOF'
 ILO_HOST=$ILO_HOST
 ILO_USERNAME=$ILO_USERNAME
 ILO_PASSWORD=$ILO_PASSWORD
 PORT=$APP_PORT
 NODE_ENV=production
-EOF"
+ENVEOF"
     
     # Install backend dependencies
     pct exec $CTID -- su - smartilo4 -c "cd Smart-ilo4 && npm install"
@@ -294,7 +294,7 @@ EOF"
 create_service() {
     print_step "Creating systemd service..."
     
-    pct exec $CTID -- bash -c "cat > /etc/systemd/system/smart-ilo4.service << 'EOF'
+    pct exec $CTID -- bash -c "cat > /etc/systemd/system/smart-ilo4.service << 'SERVICEEOF'
 [Unit]
 Description=Smart iLO4 Fan Controller
 After=network.target
@@ -320,7 +320,7 @@ ReadWritePaths=/home/smartilo4/Smart-ilo4
 
 [Install]
 WantedBy=multi-user.target
-EOF"
+SERVICEEOF"
     
     # Enable and start service
     pct exec $CTID -- systemctl daemon-reload
