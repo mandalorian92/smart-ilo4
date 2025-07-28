@@ -167,7 +167,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Check if initial setup is needed (iLO configuration)
       try {
+        console.log('Fetching iLO status...');
         const iloStatus = await getILoStatus();
+        console.log('iLO status response:', iloStatus);
         if (!iloStatus.configured) {
           console.log('iLO not configured, requiring initial setup');
           setNeedsInitialSetup(true);
@@ -178,6 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error('Error checking iLO status:', error);
         // If we can't check iLO status, assume initial setup is needed
+        console.log('Setting needsInitialSetup to true due to error');
         setNeedsInitialSetup(true);
         return;
       }
