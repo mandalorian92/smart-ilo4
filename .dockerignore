@@ -11,3 +11,9 @@ README.md
 .nyc_output
 coverage
 .vscode
+
+# SSL certificates (should be mounted or generated per environment)
+ssl/
+
+# Authentication data (should be persistent volumes in production)
+data/

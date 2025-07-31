@@ -4,11 +4,50 @@ import axios from "axios";
 const API_BASE = process.env.REACT_APP_API_URL || 
   (process.env.NODE_ENV === 'development' ? 'http://localhost:8443' : window.location.origin);
 
+// Token management
+let authToken: string | null = null;
+
+export const setAuthToken = (token: string | null) => {
+  authToken = token;
+  if (token) {
+    localStorage.setItem('auth_token', token);
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  } else {
+    localStorage.removeItem('auth_token');
+    delete api.defaults.headers.common['Authorization'];
+  }
+};
+
+export const getAuthToken = (): string | null => {
+  if (!authToken) {
+    authToken = localStorage.getItem('auth_token');
+    if (authToken) {
+      api.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+    }
+  }
+  return authToken;
+};
+
+// Initialize auth token on startup
+getAuthToken();
+
 // Create axios instance with common configuration
 const api = axios.create({
   baseURL: API_BASE,
   timeout: 30000, // Increased to 30 seconds to allow backend time to fetch data
 });
+
+// Add response interceptor to handle auth errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      setAuthToken(null);
+      // Don't redirect here, let components handle it
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Simple cache implementation for performance optimization
 const cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
@@ -176,6 +215,31 @@ export interface AppConfig {
 export const getAppConfig = (): Promise<AppConfig> => get('/api/app/config');
 export const saveAppConfig = (config: AppConfig): Promise<void> => post('/api/app/config', config);
 export const restartServerWithConfig = (port?: number): Promise<void> => post('/api/app/restart', { port });
+
+// Authentication API
+export const authAPI = {
+  login: async (username: string, password: string) => {
+    const response = await post('/api/auth/login', { username, password });
+    if (response.token) {
+      setAuthToken(response.token);
+    }
+    return response;
+  },
+  logout: async () => {
+    try {
+      await post('/api/auth/logout');
+    } finally {
+      setAuthToken(null);
+    }
+  },
+  setup: (username: string, password: string) => post('/api/auth/setup', { username, password }),
+  getStatus: () => get('/api/auth/status'),
+  getCurrentUser: () => get('/api/auth/me'),
+  createUser: (username: string, password: string) => post('/api/auth/users', { username, password }),
+  getAllUsers: () => get('/api/auth/users'),
+  changePassword: (oldPassword: string, newPassword: string) => post('/api/auth/change-password', { oldPassword, newPassword }),
+  deleteUser: (userId: string) => api.delete(`/api/auth/users/${userId}`).then(response => response.data),
+};
 
 // Auth API for admin setup
 export const setupAdminPassword = async (username: string, password: string, tempPassword?: string): Promise<{ success: boolean; message: string }> => 

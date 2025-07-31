@@ -1,4 +1,7 @@
 import { Server } from 'http';
+import https from 'https';
+import fs from 'fs';
+import path from 'path';
 import app from './app.js';
 import { getCurrentPort } from './services/appConfig.js';
 import { centralizedDataFetcher } from './services/centralizedDataFetcher.js';
@@ -6,7 +9,7 @@ import { isILoConfigured } from './services/config.js';
 // Initialize log capture service
 import './services/logger.js';
 
-let server: Server | null = null;
+let server: Server | https.Server | null = null;
 let currentPort: number;
 
 // Use configured port, fallback to environment variable, then default
@@ -18,21 +21,59 @@ const getPort = async () => {
   return envPort || configuredPort;
 };
 
-const startServer = async (port?: number): Promise<Server> => {
+// Check for SSL certificates
+const getSSLOptions = () => {
+  try {
+    const keyPath = path.join(process.cwd(), 'ssl', 'private.key');
+    const certPath = path.join(process.cwd(), 'ssl', 'certificate.crt');
+    
+    if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+      return {
+        key: fs.readFileSync(keyPath),
+        cert: fs.readFileSync(certPath)
+      };
+    }
+  } catch (error) {
+    console.log('SSL certificates not found, using HTTP');
+  }
+  return null;
+};
+
+const startServer = async (port?: number): Promise<Server | https.Server> => {
   const PORT = port || await getPort();
   currentPort = PORT;
   
+  const sslOptions = getSSLOptions();
+  
   return new Promise((resolve, reject) => {
-    const newServer = app.listen(PORT, () => {
-      console.log(`iLO4 Fan Controller API is running on port ${PORT}`);
-      console.log(`Access the web interface at: https://localhost:${PORT}`);
-      resolve(newServer);
-    });
-    
-    newServer.on('error', (error) => {
-      console.error('Server error:', error);
-      reject(error);
-    });
+    if (sslOptions) {
+      console.log('Starting HTTPS server...');
+      const httpsServer = https.createServer(sslOptions, app);
+      httpsServer.listen(PORT, () => {
+        console.log(`iLO4 Fan Controller API is running on HTTPS port ${PORT}`);
+        console.log(`Access the web interface at: https://localhost:${PORT}`);
+        console.log('🔒 HTTPS enabled - secure authentication with bcrypt');
+        resolve(httpsServer);
+      });
+      
+      httpsServer.on('error', (error) => {
+        console.error('HTTPS server error:', error);
+        reject(error);
+      });
+    } else {
+      console.log('Starting HTTP server...');
+      const httpServer = app.listen(PORT, () => {
+        console.log(`iLO4 Fan Controller API is running on HTTP port ${PORT}`);
+        console.log(`Access the web interface at: http://localhost:${PORT}`);
+        console.log('⚠️  HTTP mode - for production, add SSL certificates to /ssl directory');
+        resolve(httpServer);
+      });
+      
+      httpServer.on('error', (error) => {
+        console.error('HTTP server error:', error);
+        reject(error);
+      });
+    }
   });
 };
 
