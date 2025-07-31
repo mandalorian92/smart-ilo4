@@ -95,12 +95,42 @@ const safeSessionStorage = {
   }
 };
 
+// Legacy hash function for Safari-created users (when Web Crypto was available)
+const legacyHashPassword = async (password: string): Promise<string> => {
+  const saltedPassword = password + 'ilo4_salt';
+  
+  // Try to use Web Crypto API like Safari did
+  if (crypto?.subtle) {
+    try {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(saltedPassword);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch (error) {
+      // Fallback to simple hash
+    }
+  }
+  
+  // Fallback hash (same as current fallback)
+  let hash = 0;
+  for (let i = 0; i < saltedPassword.length; i++) {
+    const char = saltedPassword.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash).toString(16);
+};
+
 // Secure hash function using Web Crypto API with fallback for HTTP contexts
 const hashPassword = async (password: string): Promise<string> => {
   const saltedPassword = password + 'ilo4_salt';
   
-  // Try Web Crypto API first (available in HTTPS contexts)
-  if (crypto?.subtle) {
+  // Check if we're in HTTPS context
+  const isSecureContext = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
+  
+  // Try Web Crypto API only in secure contexts
+  if (isSecureContext && crypto?.subtle) {
     try {
       const encoder = new TextEncoder();
       const data = encoder.encode(saltedPassword);
@@ -114,10 +144,10 @@ const hashPassword = async (password: string): Promise<string> => {
   }
   
   // Fallback for HTTP contexts (development/Docker setup)
-  console.warn('⚠️ Using fallback password hashing (Web Crypto API not available)');
+  console.warn('⚠️ Using fallback password hashing (Web Crypto API not available or insecure context)');
   console.warn('⚠️ For production use, ensure HTTPS is enabled for secure password hashing');
   
-  // Simple hash fallback for initial setup only
+  // Consistent fallback hash for all browsers in HTTP contexts
   let hash = 0;
   for (let i = 0; i < saltedPassword.length; i++) {
     const char = saltedPassword.charCodeAt(i);
@@ -412,20 +442,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const users = JSON.parse(usersData);
       const passwords = JSON.parse(passwordsData);
       const passwordHash = await hashPassword(password);
+      const legacyPasswordHash = await legacyHashPassword(password);
       
       console.log('Available users:', Object.keys(users));
-      console.log('Password hash generated:', passwordHash.substring(0, 8) + '...');
+      console.log('Current hash generated:', passwordHash.substring(0, 8) + '...');
+      console.log('Legacy hash generated:', legacyPasswordHash.substring(0, 8) + '...');
       
-      // Find user by username
-      const foundUserId = Object.keys(users).find(userId => {
+      // Find user by username and try both hash methods
+      let foundUserId = Object.keys(users).find(userId => {
         const userMatch = users[userId].username === username;
-        const passwordMatch = passwords[userId] === passwordHash;
-        console.log(`Checking user ${userId}: username match=${userMatch}, password match=${passwordMatch}`);
+        const currentPasswordMatch = passwords[userId] === passwordHash;
+        const legacyPasswordMatch = passwords[userId] === legacyPasswordHash;
+        console.log(`Checking user ${userId}: username match=${userMatch}`);
         console.log(`  - Stored password hash: ${passwords[userId]?.substring(0, 8)}...`);
-        console.log(`  - Input password hash: ${passwordHash.substring(0, 8)}...`);
+        console.log(`  - Current hash match: ${currentPasswordMatch}`);
+        console.log(`  - Legacy hash match: ${legacyPasswordMatch}`);
         console.log(`  - User isDefault: ${users[userId].isDefault}`);
-        return userMatch && passwordMatch;
+        return userMatch && (currentPasswordMatch || legacyPasswordMatch);
       });
+      
+      // If found with legacy hash, migrate the password to current hash
+      if (foundUserId) {
+        const storedHash = passwords[foundUserId];
+        const currentHashMatch = storedHash === passwordHash;
+        const legacyHashMatch = storedHash === legacyPasswordHash;
+        
+        if (legacyHashMatch && !currentHashMatch) {
+          console.log('Migrating password from legacy hash to current hash format');
+          passwords[foundUserId] = passwordHash;
+          safeLocalStorage.setItem(PASSWORDS_STORAGE_KEY, JSON.stringify(passwords));
+        }
+      }
       
       console.log('Found user ID:', foundUserId);
       
