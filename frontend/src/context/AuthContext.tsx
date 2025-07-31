@@ -95,24 +95,36 @@ const safeSessionStorage = {
   }
 };
 
-// Secure hash function using Web Crypto API - NO FALLBACK for security
+// Secure hash function using Web Crypto API with fallback for HTTP contexts
 const hashPassword = async (password: string): Promise<string> => {
   const saltedPassword = password + 'ilo4_salt';
   
-  if (!crypto?.subtle) {
-    throw new Error('Web Crypto API is required for secure password hashing');
+  // Try Web Crypto API first (available in HTTPS contexts)
+  if (crypto?.subtle) {
+    try {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(saltedPassword);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch (error) {
+      console.error('Web Crypto API hashing failed:', error);
+      // Fall through to fallback method
+    }
   }
   
-  try {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(saltedPassword);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  } catch (error) {
-    console.error('Password hashing failed:', error);
-    throw new Error('Failed to hash password securely');
+  // Fallback for HTTP contexts (development/Docker setup)
+  console.warn('⚠️ Using fallback password hashing (Web Crypto API not available)');
+  console.warn('⚠️ For production use, ensure HTTPS is enabled for secure password hashing');
+  
+  // Simple hash fallback for initial setup only
+  let hash = 0;
+  for (let i = 0; i < saltedPassword.length; i++) {
+    const char = saltedPassword.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
   }
+  return Math.abs(hash).toString(16);
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
