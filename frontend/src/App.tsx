@@ -266,35 +266,54 @@ function AppContent() {
         onClose={() => setAccountsOpen(false)}
       />
 
-      {/* Design System Compliant Header */}
+      {/* HPE-Style Global Header */}
       <AppBar 
         position="static" 
         elevation={0}
         sx={{
-          bgcolor: 'background.paper',
-          borderBottom: `1px solid ${theme.palette.divider}`,
+          bgcolor: '#ffffff',
+          borderBottom: `2px solid ${theme.palette.divider}`,
           color: 'text.primary'
         }}
       >
-        {/* Main Toolbar */}
+        {/* Primary Header Bar - HPE Standard Layout */}
         <Toolbar 
           sx={{ 
             minHeight: { xs: 56, sm: 64, md: 72 }, 
             px: { xs: 2, sm: 3, md: 4 },
-            justifyContent: 'space-between'
+            justifyContent: 'space-between',
+            maxWidth: 1400,
+            margin: '0 auto',
+            width: '100%'
           }}
         >
-          {/* Left Section - Logo */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
+          {/* Left Section - HPE Logo Area */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: { xs: 1, sm: 2 },
+            minWidth: 200
+          }}>
             <SystemLogo height={isMobile ? 28 : isTablet ? 32 : 36} />
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 600,
+                color: '#01a982',
+                fontSize: { xs: '0.9rem', sm: '1rem', md: '1.1rem' },
+                display: { xs: 'none', sm: 'block' }
+              }}
+            >
+              iLO4 Dashboard
+            </Typography>
           </Box>
 
-          {/* Center Section - Navigation Tabs */}
+          {/* Center Section - Main Navigation following HPE pattern */}
           <Box sx={{ 
             display: 'flex', 
             justifyContent: 'center',
             flex: 1,
-            maxWidth: 600
+            maxWidth: 800
           }}>
             <Tabs 
               value={tabValue} 
@@ -305,24 +324,28 @@ function AppContent() {
               allowScrollButtonsMobile
               sx={{
                 '& .MuiTabs-indicator': {
-                  height: 2,
-                  bgcolor: 'primary.main'
+                  height: 3,
+                  bgcolor: '#01a982',
+                  borderRadius: '2px 2px 0 0'
                 },
                 '& .MuiTab-root': {
                   textTransform: 'none',
                   fontWeight: 500,
-                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  fontSize: { xs: '0.8rem', sm: '0.9rem', md: '1rem' },
                   minWidth: 'auto',
                   minHeight: 48,
-                  px: { xs: 1, sm: 2 },
-                  py: 1.5,
-                  color: 'text.secondary',
+                  px: { xs: 2, sm: 3, md: 4 },
+                  py: 2,
+                  color: '#666',
+                  transition: 'all 0.2s ease',
                   '&:hover': {
-                    color: 'text.primary'
+                    color: '#01a982',
+                    backgroundColor: 'rgba(1, 169, 130, 0.05)'
                   },
                   '&.Mui-selected': {
-                    color: 'primary.main',
-                    fontWeight: 600
+                    color: '#01a982',
+                    fontWeight: 600,
+                    backgroundColor: 'rgba(1, 169, 130, 0.08)'
                   }
                 }
               }}
@@ -338,8 +361,32 @@ function AppContent() {
             </Tabs>
           </Box>
 
-          {/* Right Section - Actions */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
+          {/* Right Section - Actions (HPE pattern: apps menu, user) */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: { xs: 1, sm: 2 },
+            minWidth: 200,
+            justifyContent: 'flex-end'
+          }}>
+            {/* User Info Chip */}
+            {user && (
+              <Chip
+                size="small"
+                label={`${user.username}`}
+                color="primary"
+                variant="outlined"
+                sx={{ 
+                  fontWeight: 500,
+                  bgcolor: `rgba(1, 169, 130, 0.08)`,
+                  borderColor: '#01a982',
+                  color: '#01a982',
+                  fontSize: '0.75rem',
+                  display: { xs: 'none', sm: 'flex' }
+                }}
+              />
+            )}
+            
             {/* Actions Menu */}
             <ActionsMenu 
               onSettingsClick={() => setSettingsOpen(true)} 
@@ -348,17 +395,20 @@ function AppContent() {
           </Box>
         </Toolbar>
 
-        {/* Secondary Toolbar - Breadcrumbs, User Info and Context */}
+        {/* Secondary Navigation Bar - Context and Breadcrumbs */}
         <Box sx={{ 
           px: { xs: 2, sm: 3, md: 4 },
-          pb: 1,
-          borderBottom: `1px solid ${theme.palette.divider}`
+          py: 1.5,
+          bgcolor: '#f8f9fa',
+          borderTop: '1px solid #e9ecef'
         }}>
           <Box sx={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
             alignItems: 'center',
-            minHeight: 40
+            maxWidth: 1400,
+            margin: '0 auto',
+            minHeight: 36
           }}>
             {/* Breadcrumbs */}
             <Breadcrumbs 
@@ -377,7 +427,11 @@ function AppContent() {
                 sx={{ 
                   display: 'flex', 
                   alignItems: 'center',
-                  fontSize: { xs: '0.8rem', sm: '0.875rem' }
+                  fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                  color: '#666',
+                  '&:hover': {
+                    color: '#01a982'
+                  }
                 }}
               >
                 <HomeIcon sx={{ mr: 0.5, fontSize: 16 }} />
@@ -389,7 +443,8 @@ function AppContent() {
                   display: 'flex', 
                   alignItems: 'center',
                   fontSize: { xs: '0.8rem', sm: '0.875rem' },
-                  fontWeight: 500
+                  fontWeight: 600,
+                  color: '#01a982'
                 }}
               >
                 {currentTab.icon}
@@ -399,38 +454,20 @@ function AppContent() {
               </Typography>
             </Breadcrumbs>
 
-            {/* User Info and Current Section Description */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              {/* User Chip */}
-              {user && (
-                <Chip
-                  size="small"
-                  label={`Welcome, ${user.username}`}
-                  color="primary"
-                  variant="outlined"
-                  sx={{ 
-                    fontWeight: 500,
-                    bgcolor: `${theme.palette.primary.main}08`,
-                    borderColor: theme.palette.primary.main,
-                    fontSize: '0.75rem'
-                  }}
-                />
-              )}
-              
-              {/* Current Section Description */}
-              {!isMobile && (
-                <Typography 
-                  variant="caption" 
-                  color="text.secondary"
-                  sx={{ 
-                    fontSize: '0.75rem',
-                    fontStyle: 'italic'
-                  }}
-                >
-                  {currentTab.description}
-                </Typography>
-              )}
-            </Box>
+            {/* Context Information */}
+            {!isMobile && (
+              <Typography 
+                variant="caption" 
+                color="text.secondary"
+                sx={{ 
+                  fontSize: '0.75rem',
+                  fontStyle: 'italic',
+                  color: '#888'
+                }}
+              >
+                {currentTab.description}
+              </Typography>
+            )}
           </Box>
         </Box>
       </AppBar>

@@ -451,8 +451,8 @@ const HistoryViewer: React.FC = () => {
       )}
 
       {/* Controls */}
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Grid container spacing={2} alignItems="center">
+      <Paper sx={{ p: 2, mb: 2, minHeight: 80 }}>
+        <Grid container spacing={2} alignItems="center" sx={{ minHeight: 48 }}>
           <Grid item xs={12} sm={6} md={3}>
             <FormControl fullWidth>
               <Select
@@ -471,7 +471,7 @@ const HistoryViewer: React.FC = () => {
           
           {/* Selection Controls */}
           <Grid item xs={12} sm={6} md={3}>
-            <Box display="flex" gap={1} sx={{ minHeight: '40px', alignItems: 'center' }}>
+            <Box display="flex" gap={1} sx={{ minHeight: '48px', alignItems: 'center' }}>
               <Button
                 variant="outlined"
                 size="medium"
@@ -523,14 +523,33 @@ const HistoryViewer: React.FC = () => {
             </Box>
           </Grid>
           
-          {/* Export Controls */}
+          {/* Export Controls - Fixed height container to prevent expansion */}
           <Grid item xs={12} sm={12} md={6}>
-            <Box display="flex" gap={2} justifyContent="flex-end" alignItems="center" sx={{ minHeight: '40px' }}>
-              {selectedRecords.size > 0 && (
+            <Box 
+              display="flex" 
+              gap={2} 
+              justifyContent="flex-end" 
+              alignItems="center" 
+              sx={{ 
+                minHeight: '48px',
+                height: '48px', // Fixed height
+                position: 'relative'
+              }}
+            >
+              {/* Selected count - positioned absolutely to not affect layout */}
+              <Box
+                sx={{
+                  position: 'absolute',
+                  right: '120px', // Position next to export button
+                  opacity: selectedRecords.size > 0 ? 1 : 0,
+                  transition: 'opacity 0.2s ease',
+                  whiteSpace: 'nowrap'
+                }}
+              >
                 <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
                   {selectedRecords.size} record{selectedRecords.size !== 1 ? 's' : ''} selected
                 </Typography>
-              )}
+              </Box>
               
               {/* Single Export Button with Smart Dropdown */}
               <Button
@@ -548,6 +567,7 @@ const HistoryViewer: React.FC = () => {
                   borderRadius: '4px',
                   px: 3,
                   py: 1,
+                  minWidth: '110px', // Fixed width to prevent button size changes
                   '&:hover': {
                     backgroundColor: '#017a63'
                   },
