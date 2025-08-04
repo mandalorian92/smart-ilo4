@@ -2,7 +2,7 @@ import axios from "axios";
 
 // In development, use the backend port; in Docker/production, use same origin
 const API_BASE = process.env.REACT_APP_API_URL || 
-  (process.env.NODE_ENV === 'development' ? 'http://localhost:8443' : window.location.origin);
+  (process.env.NODE_ENV === 'development' ? 'https://localhost:8443' : window.location.origin);
 
 // Token management
 let authToken: string | null = null;

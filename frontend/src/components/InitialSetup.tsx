@@ -73,7 +73,7 @@ export default function InitialSetup() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [tempPassword, setTempPassword] = useState('');
   
-  const { setupFirstUser, logout } = useAuth();
+  const { setupFirstUser, logout, completeInitialSetup } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -202,24 +202,17 @@ export default function InitialSetup() {
         localStorage.removeItem('temp_admin_password');
         
         setActiveStep(2);
-        setSuccess('Setup completed successfully! You will be logged out in a few seconds...');
+        setSuccess('Setup completed successfully! You will be redirected to the login page...');
         
-        // Dispatch setup completion event to notify other components
-        window.dispatchEvent(new CustomEvent('setupComplete', { 
-          detail: { timestamp: Date.now() } 
-        }));
-        console.log('Dispatched setupComplete event');
+        // Complete the initial setup to update the auth context
+        completeInitialSetup();
+        console.log('Initial setup completed via auth context');
         
-        // Auto logout after 3 seconds with proper cleanup
+        // Auto logout after 2 seconds
         setTimeout(() => {
           console.log('Auto-logout after setup completion');
           logout();
-          
-          // Force a clean redirect to login page after a brief delay
-          setTimeout(() => {
-            window.location.href = '/login';
-          }, 500);
-        }, 3000);
+        }, 2000);
       } catch (error) {
         console.error('Setup error:', error);
         setError(error instanceof Error ? error.message : 'Failed to update admin password');
