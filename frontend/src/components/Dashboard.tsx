@@ -440,44 +440,14 @@ function Dashboard() {
   // Memoize the fetch function to prevent unnecessary recreations
   const fetchData = useCallback(async () => {
     try {
-      // Use historical data instead of real-time data
-      const [latestSensors, latestFans] = await Promise.all([
-        historyAPI.getLatestSensorReadings(),
-        historyAPI.getLatestFanReadings()
-      ]);
-      
-      // Convert historical data format to match existing component expectations
-      const sensorsData = latestSensors.map(sensor => ({
-        name: sensor.sensor_name,
-        type: sensor.type,
-        status: sensor.status,
-        reading: sensor.reading,
-        context: sensor.context,
-        critical: sensor.critical,
-        fatal: sensor.fatal
-      }));
-      
-      const fansData = latestFans.map(fan => ({
-        name: fan.fan_name,
-        speed: fan.speed,
-        status: fan.status,
-        health: fan.health
-      }));
+      // Use real-time API data for immediate fix
+      const [sensorsData, fansData] = await Promise.all([getSensors(), getFans()]);
       
       setSensors(sensorsData);
       setFans(fansData);
       setLastUpdate(new Date());
     } catch (error) {
       console.error('Failed to fetch data:', error);
-      // Fallback to real-time data if historical data is not available
-      try {
-        const [sensorsData, fansData] = await Promise.all([getSensors(), getFans()]);
-        setSensors(sensorsData);
-        setFans(fansData);
-        setLastUpdate(new Date());
-      } catch (fallbackError) {
-        console.error('Failed to fetch fallback data:', fallbackError);
-      }
     } finally {
       setLoading(false);
     }

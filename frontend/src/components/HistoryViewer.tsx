@@ -24,7 +24,12 @@ import {
   Tooltip,
   SelectChangeEvent,
   Checkbox,
-  FormControlLabel
+  FormControlLabel,
+  Menu,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  ButtonGroup
 } from '@mui/material';
 import {
   Download,
@@ -34,7 +39,8 @@ import {
   Schedule,
   Assessment,
   SelectAll,
-  ClearAll
+  ClearAll,
+  ArrowDropDown
 } from '@mui/icons-material';
 import { historyAPI } from '../api';
 
@@ -77,6 +83,8 @@ const HistoryViewer: React.FC = () => {
   // Selection state
   const [selectedRecords, setSelectedRecords] = useState<Set<number>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
+  const [exportMenuAnchor, setExportMenuAnchor] = useState<HTMLElement | null>(null);
+  const [exportSelectedMenuAnchor, setExportSelectedMenuAnchor] = useState<HTMLElement | null>(null);
   
   // Table controls
   const [selectedTable, setSelectedTable] = useState<string>('all');
@@ -204,6 +212,29 @@ const HistoryViewer: React.FC = () => {
     setSelectAll(false);
   };
 
+  // Export menu handlers
+  const handleExportMenuOpen = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setExportMenuAnchor(event.currentTarget);
+  };
+
+  const handleExportMenuClose = () => {
+    setExportMenuAnchor(null);
+  };
+
+  const handleExportSelectedMenuOpen = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setExportSelectedMenuAnchor(event.currentTarget);
+  };
+
+  const handleExportSelectedMenuClose = () => {
+    setExportSelectedMenuAnchor(null);
+  };
+
+  const handleExportAction = (format: string, exportSelected: boolean = false) => {
+    handleExport(format, exportSelected);
+    handleExportMenuClose();
+    handleExportSelectedMenuClose();
+  };
+
   const handleExport = async (format: string, exportSelected: boolean = false) => {
     try {
       setExporting(true);
@@ -327,6 +358,23 @@ const HistoryViewer: React.FC = () => {
           startIcon={<Refresh />}
           onClick={handleRefresh}
           disabled={loading}
+          sx={{
+            textTransform: 'none',
+            fontWeight: 600,
+            borderRadius: '4px',
+            borderColor: '#01a982',
+            color: '#01a982',
+            px: 3,
+            py: 1,
+            '&:hover': {
+              borderColor: '#017a63',
+              backgroundColor: 'rgba(1, 169, 130, 0.04)'
+            },
+            '&:disabled': {
+              borderColor: '#ccc',
+              color: '#ccc'
+            }
+          }}
         >
           Refresh
         </Button>
@@ -436,19 +484,49 @@ const HistoryViewer: React.FC = () => {
             <Box display="flex" gap={1}>
               <Button
                 variant="outlined"
-                size="small"
+                size="medium"
                 startIcon={<SelectAll />}
                 onClick={handleSelectAllOnPage}
                 disabled={!data?.data || data.data.length === 0}
+                sx={{
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  borderRadius: '4px',
+                  borderColor: 'rgba(0, 0, 0, 0.23)',
+                  color: 'text.primary',
+                  '&:hover': {
+                    borderColor: '#01a982',
+                    backgroundColor: 'rgba(1, 169, 130, 0.04)'
+                  },
+                  '&:disabled': {
+                    borderColor: '#e0e0e0',
+                    color: '#bdbdbd'
+                  }
+                }}
               >
                 {selectAll ? 'Deselect Page' : 'Select Page'}
               </Button>
               <Button
                 variant="outlined"
-                size="small"
+                size="medium"
                 startIcon={<ClearAll />}
                 onClick={handleClearAllSelections}
                 disabled={selectedRecords.size === 0}
+                sx={{
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  borderRadius: '4px',
+                  borderColor: 'rgba(0, 0, 0, 0.23)',
+                  color: 'text.primary',
+                  '&:hover': {
+                    borderColor: '#f44336',
+                    backgroundColor: 'rgba(244, 67, 54, 0.04)'
+                  },
+                  '&:disabled': {
+                    borderColor: '#e0e0e0',
+                    color: '#bdbdbd'
+                  }
+                }}
               >
                 Clear All
               </Button>
@@ -457,45 +535,160 @@ const HistoryViewer: React.FC = () => {
           
           {/* Export Controls */}
           <Grid item xs={12} sm={12} md={6}>
-            <Box display="flex" gap={1} justifyContent="flex-end" flexWrap="wrap">
+            <Box display="flex" gap={2} justifyContent="flex-end" alignItems="center" flexWrap="wrap">
               {selectedRecords.size > 0 && (
-                <Typography variant="body2" sx={{ alignSelf: 'center', mr: 1 }}>
-                  {selectedRecords.size} selected
+                <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                  {selectedRecords.size} record{selectedRecords.size !== 1 ? 's' : ''} selected
                 </Typography>
               )}
               
-              {/* Export Selected Records */}
+              {/* Export Selected Records - HPE Style Button with Dropdown */}
               {selectedRecords.size > 0 && (
                 <>
-                  {exportFormats.map((format) => (
-                    <Button
-                      key={`selected-${format.value}`}
-                      variant="contained"
-                      size="small"
-                      startIcon={<Download />}
-                      onClick={() => handleExport(format.value, true)}
-                      disabled={exporting}
-                      color="primary"
-                    >
-                      Export Selected {format.label}
-                    </Button>
-                  ))}
+                  <Button
+                    variant="contained"
+                    size="medium"
+                    startIcon={<Download />}
+                    endIcon={<ArrowDropDown />}
+                    onClick={handleExportSelectedMenuOpen}
+                    disabled={exporting}
+                    sx={{
+                      backgroundColor: '#01a982',
+                      color: 'white',
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      borderRadius: '4px',
+                      px: 3,
+                      py: 1,
+                      '&:hover': {
+                        backgroundColor: '#017a63'
+                      },
+                      '&:disabled': {
+                        backgroundColor: '#ccc'
+                      }
+                    }}
+                  >
+                    Export Selected
+                  </Button>
+                  
+                  <Menu
+                    anchorEl={exportSelectedMenuAnchor}
+                    open={Boolean(exportSelectedMenuAnchor)}
+                    onClose={handleExportSelectedMenuClose}
+                    PaperProps={{
+                      sx: {
+                        mt: 1,
+                        minWidth: 180,
+                        border: '1px solid #e0e0e0',
+                        borderRadius: '8px',
+                        boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.15)'
+                      }
+                    }}
+                  >
+                    <Typography variant="subtitle2" sx={{ px: 2, py: 1, color: 'text.secondary', fontWeight: 600 }}>
+                      Export {selectedRecords.size} record{selectedRecords.size !== 1 ? 's' : ''} as:
+                    </Typography>
+                    <Divider />
+                    {exportFormats.map((format) => (
+                      <MenuItem
+                        key={`selected-${format.value}`}
+                        onClick={() => handleExportAction(format.value, true)}
+                        sx={{
+                          py: 1.5,
+                          px: 2,
+                          '&:hover': {
+                            backgroundColor: '#f5f5f5'
+                          }
+                        }}
+                      >
+                        <ListItemIcon>
+                          <Download fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary={format.label}
+                          primaryTypographyProps={{
+                            fontSize: '0.9rem',
+                            fontWeight: 500
+                          }}
+                        />
+                      </MenuItem>
+                    ))}
+                  </Menu>
                 </>
               )}
               
-              {/* Export All Records */}
-              {exportFormats.map((format) => (
-                <Button
-                  key={format.value}
-                  variant="outlined"
-                  size="small"
-                  startIcon={<Download />}
-                  onClick={() => handleExport(format.value, false)}
-                  disabled={exporting}
-                >
-                  Export All {format.label}
-                </Button>
-              ))}
+              {/* Export All Records - HPE Style Button with Dropdown */}
+              <Button
+                variant="outlined"
+                size="medium"
+                startIcon={<Download />}
+                endIcon={<ArrowDropDown />}
+                onClick={handleExportMenuOpen}
+                disabled={exporting}
+                sx={{
+                  borderColor: '#01a982',
+                  color: '#01a982',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  borderRadius: '4px',
+                  px: 3,
+                  py: 1,
+                  '&:hover': {
+                    borderColor: '#017a63',
+                    backgroundColor: 'rgba(1, 169, 130, 0.04)'
+                  },
+                  '&:disabled': {
+                    borderColor: '#ccc',
+                    color: '#ccc'
+                  }
+                }}
+              >
+                Export All
+              </Button>
+              
+              <Menu
+                anchorEl={exportMenuAnchor}
+                open={Boolean(exportMenuAnchor)}
+                onClose={handleExportMenuClose}
+                PaperProps={{
+                  sx: {
+                    mt: 1,
+                    minWidth: 180,
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '8px',
+                    boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.15)'
+                  }
+                }}
+              >
+                <Typography variant="subtitle2" sx={{ px: 2, py: 1, color: 'text.secondary', fontWeight: 600 }}>
+                  Export all {selectedTable} data as:
+                </Typography>
+                <Divider />
+                {exportFormats.map((format) => (
+                  <MenuItem
+                    key={format.value}
+                    onClick={() => handleExportAction(format.value, false)}
+                    sx={{
+                      py: 1.5,
+                      px: 2,
+                      '&:hover': {
+                        backgroundColor: '#f5f5f5'
+                      }
+                    }}
+                  >
+                    <ListItemIcon>
+                      <Download fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary={format.label}
+                      primaryTypographyProps={{
+                        fontSize: '0.9rem',
+                        fontWeight: 500
+                      }}
+                    />
+                  </MenuItem>
+                ))}
+              </Menu>
             </Box>
           </Grid>
         </Grid>
