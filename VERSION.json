@@ -1,7 +1,22 @@
 {
-  "version": "1.3.0",
-  "buildDate": "2025-07-25",
+  "version": "1.4.2",
+  "buildDate": "2025-08-04",
   "changelog": [
+    {
+      "version": "1.4.2",
+      "date": "2025-08-04",
+      "type": "minor",
+      "changes": [
+        "Added record selection and export functionality to History tab",
+        "Enhanced export options with 'Export Selected' and 'Export All' capabilities",
+        "Improved chart scaling with dynamic time unit adjustment based on time range",
+        "Fixed chart responsiveness for different time periods (5min to 72hr+)",
+        "Added bulk selection controls (Select Page, Clear All) for History records",
+        "Implemented smart selection state management across pagination",
+        "Updated Docker configuration to use npm instead of yarn",
+        "Enhanced chart options with better tick management and mobile optimization"
+      ]
+    },
     {
       "version": "1.3.0",
       "date": "2025-07-25",

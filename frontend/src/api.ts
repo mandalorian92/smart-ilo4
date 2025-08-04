@@ -280,3 +280,104 @@ export const refreshPowerInformation = (): Promise<PowerInformation> => {
 
 export const getRecentSystemLogs = (options?: { signal?: AbortSignal }): Promise<SystemLogRecord[]> => 
   get('/api/systemlog/recent', 'systemlogs', 30000, options); // 30 second cache
+
+// Historical Data API
+export interface TimeRange {
+  minutes: number;
+  label: string;
+}
+
+export interface SensorReading {
+  id?: number;
+  timestamp: number;
+  sensor_name: string;
+  reading: number;
+  status: string;
+  type: string;
+  context?: string;
+  critical?: number;
+  fatal?: number;
+  created_at?: string;
+}
+
+export interface FanReading {
+  id?: number;
+  timestamp: number;
+  fan_name: string;
+  speed: number;
+  status: string;
+  health?: string;
+  created_at?: string;
+}
+
+export interface HistoricalDataPoint {
+  id?: number;
+  timestamp: number;
+  type: string;
+  data: any;
+  created_at?: string;
+}
+
+export const historyAPI = {
+  // Get time range options
+  getTimeRanges: (): Promise<TimeRange[]> => get('/api/history/time-ranges'),
+  
+  // Get sensor readings for a time range
+  getSensorReadings: (timeRange: number, sensorName?: string): Promise<SensorReading[]> => {
+    const params = sensorName ? `?timeRange=${timeRange}&sensorName=${sensorName}` : `?timeRange=${timeRange}`;
+    return get(`/api/history/sensors${params}`);
+  },
+  
+  // Get fan readings for a time range
+  getFanReadings: (timeRange: number, fanName?: string): Promise<FanReading[]> => {
+    const params = fanName ? `?timeRange=${timeRange}&fanName=${fanName}` : `?timeRange=${timeRange}`;
+    return get(`/api/history/fans${params}`);
+  },
+  
+  // Get historical data by type
+  getHistoricalData: (type: string, timeRange: number): Promise<HistoricalDataPoint[]> => 
+    get(`/api/history/data/${type}?timeRange=${timeRange}`),
+  
+  // Get latest readings for dashboard
+  getLatestSensorReadings: (): Promise<SensorReading[]> => get('/api/history/latest/sensors'),
+  getLatestFanReadings: (): Promise<FanReading[]> => get('/api/history/latest/fans'),
+  getLatestHistoricalData: (type: string): Promise<HistoricalDataPoint | null> => 
+    get(`/api/history/latest/${type}`),
+  
+  // Get chart data formatted for Chart.js
+  getChartSensorData: (timeRange: number): Promise<any> => 
+    get(`/api/history/chart/sensors?timeRange=${timeRange}`),
+  getChartFanData: (timeRange: number): Promise<any> => 
+    get(`/api/history/chart/fans?timeRange=${timeRange}`),
+  
+  // Get aggregated data
+  getAggregatedSensorData: (timeRange: number, interval?: number): Promise<any[]> => {
+    const params = interval ? `?timeRange=${timeRange}&interval=${interval}` : `?timeRange=${timeRange}`;
+    return get(`/api/history/aggregated/sensors${params}`);
+  },
+
+  // Database viewer endpoints for History Tab
+  getDatabaseStats: (): Promise<any> => 
+    get('/api/history/database/stats'),
+    
+  getPaginatedData: (table: string = 'all', page: number = 1, pageSize: number = 50, sortBy: string = 'timestamp', sortOrder: string = 'DESC'): Promise<any> => 
+    get(`/api/history/database/data?table=${table}&page=${page}&pageSize=${pageSize}&sortBy=${sortBy}&sortOrder=${sortOrder}`),
+    
+  exportData: (table: string = 'all', format: string = 'csv', timeRange?: number): Promise<Blob> => {
+    const params = new URLSearchParams({ table, format });
+    if (timeRange) params.append('timeRange', timeRange.toString());
+    
+    const token = getAuthToken();
+    return fetch(`${API_BASE}/api/history/database/export?${params}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : ''
+      }
+    }).then(response => {
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+      return response.blob();
+    });
+  }
+};

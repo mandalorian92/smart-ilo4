@@ -2,6 +2,8 @@ import { runIloCommand } from "./sshClient.js";
 import { SystemLogRecord } from "./systemLog.js";
 import { PowerInformation } from "./power.js";
 import { SystemInformation } from "./systemInfo.js";
+import { historicalStorage } from "./historicalStorage.js";
+import { getSensors, getFans } from "./ilo.js";
 
 interface PidInfo {
   number: number;
@@ -115,6 +117,9 @@ class CentralizedDataFetcher {
       await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
       
       await this.fetchPidData();
+
+      // Store thermal data in historical storage
+      await this.storeThermalDataToHistory();
 
       this.cache.lastUpdated = new Date();
       console.log('Centralized data fetch cycle completed successfully');
@@ -304,6 +309,43 @@ class CentralizedDataFetcher {
       console.error('Error fetching PID data:', error);
       this.cache.errors.pidData = error instanceof Error ? error.message : 'Unknown error';
       this.cache.pidData = [];
+    }
+  }
+
+  // Store thermal data to historical storage
+  private async storeThermalDataToHistory() {
+    try {
+      console.log('Storing thermal data to historical storage...');
+      
+      // Fetch current thermal data
+      const [sensors, fans] = await Promise.all([
+        getSensors(),
+        getFans()
+      ]);
+
+      // Store thermal data
+      await historicalStorage.storeThermalData(sensors, fans);
+
+      // Store other data types
+      if (this.cache.powerInfo) {
+        await historicalStorage.storeHistoricalData('power', this.cache.powerInfo);
+      }
+
+      if (this.cache.systemInfo) {
+        await historicalStorage.storeHistoricalData('system_info', this.cache.systemInfo);
+      }
+
+      if (this.cache.systemLogs.length > 0) {
+        await historicalStorage.storeHistoricalData('system_log', this.cache.systemLogs);
+      }
+
+      if (this.cache.pidData.length > 0) {
+        await historicalStorage.storeHistoricalData('pid', this.cache.pidData);
+      }
+
+      console.log('Thermal data stored to historical storage successfully');
+    } catch (error) {
+      console.error('Error storing thermal data to historical storage:', error);
     }
   }
 

@@ -6,6 +6,7 @@ import app from './app.js';
 import { getCurrentPort } from './services/appConfig.js';
 import { centralizedDataFetcher } from './services/centralizedDataFetcher.js';
 import { isILoConfigured } from './services/config.js';
+import { historicalStorage } from './services/historicalStorage.js';
 // Initialize log capture service
 import './services/logger.js';
 
@@ -107,6 +108,11 @@ export const getCurrentServerPort = (): number => currentPort;
 const initializeServer = async () => {
   try {
     server = await startServer();
+    
+    // Initialize historical storage
+    console.log('Initializing historical storage...');
+    await historicalStorage.initialize();
+    console.log('Historical storage initialized successfully');
     
     // Initialize centralized data fetcher if iLO is configured
     try {

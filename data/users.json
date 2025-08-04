@@ -4,6 +4,6 @@
     "username": "admin",
     "createdAt": "2025-07-31T21:39:16.222Z",
     "sessionTimeout": 30,
-    "isDefault": true
+    "isDefault": false
   }
 }

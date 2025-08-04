@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getHistory, getAvailableSensors } from "../api";
+import { getHistory, getAvailableSensors, historyAPI } from "../api";
 import { 
   Card, 
   CardContent, 
@@ -19,6 +19,7 @@ import {
   useMediaQuery
 } from "@mui/material";
 import { SPACING } from '../constants/spacing';
+import { CARD_STYLES, TIME_RANGE_OPTIONS, DEFAULT_TIME_RANGE, getChartOptions } from '../constants/cardStyles';
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -79,6 +80,8 @@ function HistoryChart({
   const [loading, setLoading] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [showFahrenheit, setShowFahrenheit] = useState(false);
+  const [timeRange, setTimeRange] = useState(15); // Default to 15 minutes
+  const [timeRanges, setTimeRanges] = useState<Array<{minutes: number, label: string}>>([]);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
@@ -158,14 +161,66 @@ function HistoryChart({
   };
 
   useEffect(() => {
+    // Fetch time ranges on component mount
+    async function fetchTimeRanges() {
+      try {
+        const ranges = await historyAPI.getTimeRanges();
+        setTimeRanges(ranges);
+      } catch (error) {
+        console.error('Failed to fetch time ranges:', error);
+      }
+    }
+    fetchTimeRanges();
+  }, []);
+
+  useEffect(() => {
     async function fetchData() {
       try {
-        const [histData, sensorsResponse] = await Promise.all([
-          getHistory(),
-          getAvailableSensors()
+        setLoading(true);
+        
+        // Fetch historical sensor data and available sensors
+        const [chartData, sensorsResponse] = await Promise.all([
+          historyAPI.getChartSensorData(timeRange),
+          getAvailableSensors() // Still use this for sensor metadata
         ]);
         
-        setHistoryData(histData);
+        // Convert chart data to history format
+        if (chartData.datasets && chartData.datasets.length > 0) {
+          const convertedHistory: HistoryPoint[] = [];
+          
+          // Get unique timestamps from all datasets
+          const timestamps = new Set<number>();
+          chartData.datasets.forEach((dataset: any) => {
+            dataset.data.forEach((point: any) => {
+              timestamps.add(point.x);
+            });
+          });
+          
+          // Convert to sorted array
+          const sortedTimestamps = Array.from(timestamps).sort((a, b) => a - b);
+          
+          // Create history points
+          sortedTimestamps.forEach(timestamp => {
+            const sensors: { [sensorName: string]: number } = {};
+            
+            chartData.datasets.forEach((dataset: any) => {
+              const dataPoint = dataset.data.find((point: any) => point.x === timestamp);
+              if (dataPoint) {
+                sensors[dataset.label] = dataPoint.y;
+              }
+            });
+            
+            convertedHistory.push({
+              time: new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              timestamp,
+              sensors
+            });
+          });
+          
+          setHistoryData(convertedHistory);
+        } else {
+          setHistoryData([]);
+        }
         
         // Handle the new response format
         const sensorsData = sensorsResponse.sensors || sensorsResponse; // Handle both old and new formats
@@ -174,6 +229,20 @@ function HistoryChart({
         setIsInitialLoad(false);
       } catch (error) {
         console.error('Failed to fetch data:', error);
+        // Fallback to legacy API
+        try {
+          const [histData, sensorsResponse] = await Promise.all([
+            getHistory(),
+            getAvailableSensors()
+          ]);
+          
+          setHistoryData(histData);
+          const sensorsData = sensorsResponse.sensors || sensorsResponse;
+          setAvailableSensors(sensorsData);
+          setIsInitialLoad(false);
+        } catch (fallbackError) {
+          console.error('Fallback fetch also failed:', fallbackError);
+        }
       } finally {
         setLoading(false);
       }
@@ -181,11 +250,11 @@ function HistoryChart({
     
     fetchData();
     const interval = setInterval(() => {
-      // Update silently without changing selected sensors
+      // Update silently without changing loading state for ongoing updates
       fetchData();
     }, 60000); // Update every 1 minute for sensor data
     return () => clearInterval(interval);
-  }, [isInitialLoad]);
+  }, [timeRange, isInitialLoad]);
 
   if (loading) return <CircularProgress />;
 
@@ -242,107 +311,112 @@ function HistoryChart({
     };
   };
 
-  // Chart options with improved time grid
-  const createChartOptions = (title: string) => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'top' as const,
-        display: !isMobile, // Hide legend on mobile to save space
-        labels: {
-          color: theme.palette.text.primary,
-          usePointStyle: true,
-          padding: isMobile ? 10 : 20,
-          font: {
-            size: isMobile ? 10 : 12
+  // Chart options with improved time scaling
+  const createChartOptions = (title: string) => {
+    // Get base options with proper time scaling
+    const baseOptions = getChartOptions('Temperature (°C)', timeRange);
+    
+    // Customize with theme and responsiveness
+    return {
+      ...baseOptions,
+      plugins: {
+        ...baseOptions.plugins,
+        legend: {
+          position: 'top' as const,
+          display: !isMobile, // Hide legend on mobile to save space
+          labels: {
+            color: theme.palette.text.primary,
+            usePointStyle: true,
+            padding: isMobile ? 10 : 20,
+            font: {
+              size: isMobile ? 10 : 12
+            },
+            boxWidth: isMobile ? 10 : 20
+          }
+        },
+        tooltip: {
+          mode: 'nearest' as const,
+          intersect: true,
+          titleFont: {
+            size: isMobile ? 12 : 14
           },
-          boxWidth: isMobile ? 10 : 20
+          bodyFont: {
+            size: isMobile ? 11 : 13
+          },
+          callbacks: {
+            title: function(context: any) {
+              // Show the time for the hovered point
+              return context[0]?.label || '';
+            },
+            label: function(context: any) {
+              const sensorName = context.dataset.label;
+              const value = context.parsed.y;
+              return `${sensorName}: ${value}${getTemperatureUnit()}`;
+            }
+          }
         }
       },
-      tooltip: {
+      scales: {
+        ...baseOptions.scales,
+        x: {
+          ...baseOptions.scales.x,
+          title: {
+            display: !isMobile, // Hide axis titles on mobile
+            text: 'Time',
+            color: theme.palette.text.primary,
+            font: {
+              size: isMobile ? 10 : 12
+            }
+          },
+          ticks: {
+            ...baseOptions.scales.x.ticks,
+            color: theme.palette.text.secondary,
+            maxRotation: isMobile ? 45 : 30,
+            font: {
+              size: isMobile ? 9 : 11
+            },
+          },
+          grid: {
+            color: theme.palette.divider,
+            display: !isMobile // Hide grid on mobile for cleaner look
+          }
+        },
+        y: {
+          ...baseOptions.scales.y,
+          title: {
+            display: !isMobile,
+            text: `Temperature (${getTemperatureUnit()})`,
+            color: theme.palette.text.primary,
+            font: {
+              size: isMobile ? 10 : 12
+            }
+          },
+          ticks: {
+            color: theme.palette.text.secondary,
+            font: {
+              size: isMobile ? 9 : 11
+            }
+          },
+          grid: {
+            color: theme.palette.divider,
+          }
+        }
+      },
+      interaction: {
         mode: 'nearest' as const,
         intersect: true,
-        titleFont: {
-          size: isMobile ? 12 : 14
-        },
-        bodyFont: {
-          size: isMobile ? 11 : 13
-        },
-        callbacks: {
-          title: function(context: any) {
-            // Show the time for the hovered point
-            return context[0]?.label || '';
-          },
-          label: function(context: any) {
-            const sensorName = context.dataset.label;
-            const value = context.parsed.y;
-            return `${sensorName}: ${value}${getTemperatureUnit()}`;
-          }
-        }
-      }
-    },
-    scales: {
-      x: {
-        display: true,
-        title: {
-          display: !isMobile, // Hide axis titles on mobile
-          text: 'Time',
-          color: theme.palette.text.primary,
-          font: {
-            size: isMobile ? 10 : 12
-          }
-        },
-        ticks: {
-          color: theme.palette.text.secondary,
-          maxRotation: isMobile ? 45 : 30,
-          font: {
-            size: isMobile ? 9 : 11
-          },
-          // Show every 5 minutes instead of every minute
-          maxTicksLimit: 12, // Limit to about 12 ticks (every 5 minutes for an hour)
-          autoSkip: true
-        },
-        grid: {
-          color: theme.palette.divider,
-          display: !isMobile // Hide grid on mobile for cleaner look
-        }
       },
-      y: {
-        display: true,
-        title: {
-          display: !isMobile,
-          text: `Temperature (${getTemperatureUnit()})`,
-          color: theme.palette.text.primary,
-          font: {
-            size: isMobile ? 10 : 12
-          }
+      elements: {
+        point: {
+          radius: isMobile ? 2 : 3, // Smaller points on mobile
+          hoverRadius: isMobile ? 4 : 6
         },
-        ticks: {
-          color: theme.palette.text.secondary,
-          font: {
-            size: isMobile ? 9 : 11
-          }
-        },
-        grid: {
-          color: theme.palette.divider,
+        line: {
+          borderWidth: isMobile ? 1.5 : 2 // Thinner lines on mobile
         }
       }
-    },
-    interaction: {
-      mode: 'nearest' as const,
-      intersect: true,
-    },
-    elements: {
-      point: {
-        radius: isMobile ? 2 : 3, // Smaller points on mobile
-        hoverRadius: isMobile ? 4 : 6
-      },
-      line: {
-        borderWidth: isMobile ? 1.5 : 2 // Thinner lines on mobile
-      }
-    }
-  });
+    };
+  };
 
   const systemChartData = createChartData(systemSensors);
   const powerSupplyChartData = createChartData(powerSupplySensors);
@@ -354,23 +428,21 @@ function HistoryChart({
     sensors: SensorInfo[],
     isFirst: boolean = false
   ) => (
-    <Card sx={{ 
-      height: '450px', // Fixed height for consistency
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
-      <CardContent sx={{ 
-        p: { xs: 2, sm: 3 },
+    <Card 
+      variant={CARD_STYLES.CONTAINER.variant}
+      sx={{ 
+        ...CARD_STYLES.CONTAINER.sx(theme),
+        height: '450px', // Fixed height for consistency
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'column'
+      }}
+    >
+      <CardContent sx={{ 
+        ...CARD_STYLES.CONTENT.sx,
         height: '100%'
       }}>
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: { xs: 'column', sm: 'row' },
-          justifyContent: 'space-between', 
-          alignItems: { xs: 'flex-start', sm: 'center' }, 
-          mb: 3,
+        <Box sx={{
+          ...CARD_STYLES.HEADER.sx,
           gap: { xs: 2, sm: 0 }
         }}>
           <Typography 
@@ -381,32 +453,33 @@ function HistoryChart({
           >
             {title}
           </Typography>
-          {/* Only show temperature unit toggle on the first card */}
-          {isFirst && (
-            <FormControlLabel
-              control={
-                <Switch 
-                  checked={showFahrenheit} 
-                  onChange={(e) => setShowFahrenheit(e.target.checked)}
-                  size={isMobile ? "small" : "medium"}
-                />
-              }
-              label={
-                <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
-                  {isMobile ? "°F" : "Show in Fahrenheit"}
-                </Typography>
-              }
-              sx={{ m: 0 }}
-            />
+          {/* Show time range selector on the first card or individual cards */}
+          {(isFirst || showOnlyPowerSupply || showOnlyPeripheral) && timeRanges.length > 0 && (
+            <FormControl 
+              size={CARD_STYLES.TIME_RANGE_SELECTOR.size}
+              sx={CARD_STYLES.TIME_RANGE_SELECTOR.sx}
+            >
+              <InputLabel>Time Range</InputLabel>
+              <Select
+                value={timeRange}
+                label="Time Range"
+                onChange={(e) => setTimeRange(e.target.value as number)}
+              >
+                {timeRanges.map((range) => (
+                  <MenuItem key={range.minutes} value={range.minutes}>
+                    {range.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           )}
         </Box>
         
         {sensors.length > 0 ? (
           <>
             <Box sx={{ 
-              height: { xs: 250, sm: 300, md: 350 },
-              position: 'relative',
-              flex: 1
+              ...CARD_STYLES.CHART_CONTAINER.sx,
+              height: { xs: 250, sm: 300, md: 350 }
             }}>
               <Line data={chartData} options={createChartOptions(title)} />
             </Box>

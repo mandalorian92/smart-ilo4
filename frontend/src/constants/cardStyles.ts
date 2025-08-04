@@ -168,8 +168,165 @@ export const CARD_STYLES = {
     sx: { 
       p: SPACING.CARD_CONTENT.NESTED
     }
+  },
+
+  // Time range selector properties (consistent across all chart cards)
+  TIME_RANGE_SELECTOR: {
+    size: 'small' as const,
+    sx: {
+      minWidth: 120,
+      '& .MuiSelect-select': {
+        padding: '8px 12px',
+        fontSize: '0.875rem'
+      }
+    }
+  },
+
+  // Chart container properties (consistent chart display area)
+  CHART_CONTAINER: {
+    sx: {
+      flex: 1,
+      minHeight: 300,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      position: 'relative' as const
+    }
+  },
+
+  // Loading state properties (centered spinner)
+  LOADING: {
+    sx: {
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: 200,
+    }
+  },
+
+  // Error state properties (centered error message)
+  ERROR: {
+    sx: {
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: 200,
+      color: 'error.main',
+      textAlign: 'center',
+    }
   }
 } as const;
+
+// Time range options for all temperature cards
+export const TIME_RANGE_OPTIONS = [
+  { value: 5, label: '5 min' },
+  { value: 15, label: '15 min' },
+  { value: 30, label: '30 min' },
+  { value: 60, label: '1 hour' },
+  { value: 120, label: '2 hours' },
+  { value: 1440, label: '1 day' },
+];
+
+// Default time range (15 minutes)
+export const DEFAULT_TIME_RANGE = 15;
+
+// Chart color palette for consistent styling
+export const CHART_COLORS = {
+  primary: 'rgb(54, 162, 235)',
+  secondary: 'rgb(255, 99, 132)',
+  success: 'rgb(75, 192, 192)',
+  warning: 'rgb(255, 205, 86)',
+  info: 'rgb(153, 102, 255)',
+  danger: 'rgb(255, 99, 132)',
+  // Background colors with transparency
+  primaryBackground: 'rgba(54, 162, 235, 0.2)',
+  secondaryBackground: 'rgba(255, 99, 132, 0.2)',
+  successBackground: 'rgba(75, 192, 192, 0.2)',
+  warningBackground: 'rgba(255, 205, 86, 0.2)',
+  infoBackground: 'rgba(153, 102, 255, 0.2)',
+  dangerBackground: 'rgba(255, 99, 132, 0.2)',
+};
+
+// Chart configuration options for temperature charts
+export const getChartOptions = (yAxisLabel: string = 'Temperature (°C)', timeRange: number = 15) => {
+  // Determine time unit and display format based on time range
+  let timeUnit: 'minute' | 'hour' | 'day' = 'minute';
+  let displayFormat = 'HH:mm';
+  let stepSize = 1;
+
+  if (timeRange <= 30) {
+    // For 5, 15, 30 minutes - show every minute
+    timeUnit = 'minute';
+    displayFormat = 'HH:mm';
+    stepSize = timeRange <= 15 ? 1 : 2; // Show every minute for ≤15min, every 2min for 30min
+  } else if (timeRange <= 180) {
+    // For 1-3 hours - show every 5-15 minutes
+    timeUnit = 'minute';
+    displayFormat = 'HH:mm';
+    stepSize = timeRange <= 60 ? 5 : 15;
+  } else if (timeRange <= 1440) {
+    // For up to 24 hours - show every hour
+    timeUnit = 'hour';
+    displayFormat = 'HH:mm';
+    stepSize = 1;
+  } else {
+    // For more than 24 hours - show every few hours or days
+    timeUnit = timeRange <= 4320 ? 'hour' : 'day'; // 72 hours = 3 days
+    displayFormat = timeUnit === 'hour' ? 'MMM dd HH:mm' : 'MMM dd';
+    stepSize = timeUnit === 'hour' ? 6 : 1;
+  }
+
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: {
+        type: 'time' as const,
+        time: {
+          unit: timeUnit,
+          stepSize: stepSize,
+          displayFormats: {
+            minute: 'HH:mm',
+            hour: 'HH:mm',
+            day: 'MMM dd',
+          },
+        },
+        title: {
+          display: true,
+          text: 'Time',
+        },
+        ticks: {
+          maxTicksLimit: 12, // Limit number of ticks to prevent overcrowding
+          autoSkip: true,
+        },
+      },
+      y: {
+        beginAtZero: false,
+        title: {
+          display: true,
+          text: yAxisLabel,
+        },
+        grid: {
+          color: 'rgba(0, 0, 0, 0.1)',
+        },
+      },
+    },
+    plugins: {
+      legend: {
+        position: 'top' as const,
+      },
+      tooltip: {
+        mode: 'index' as const,
+        intersect: false,
+      },
+    },
+    interaction: {
+      mode: 'nearest' as const,
+      axis: 'x' as const,
+      intersect: false,
+    },
+  };
+};
 
 // Helper function to get card container props
 export const getCardContainerProps = (theme: Theme) => ({

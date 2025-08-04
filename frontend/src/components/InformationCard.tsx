@@ -11,7 +11,7 @@ import {
   useTheme
 } from '@mui/material';
 import { Refresh as RefreshIcon, Info as InfoIcon } from '@mui/icons-material';
-import { getSystemInformation, refreshSystemInformation, type SystemInformation } from '../api';
+import { getSystemInformation, refreshSystemInformation, historyAPI, type SystemInformation } from '../api';
 import { CARD_STYLES, getGridCardContainerProps } from '../constants/cardStyles';
 
 const InformationCard: React.FC = () => {
@@ -33,12 +33,38 @@ const InformationCard: React.FC = () => {
       
       console.log(`${isRefresh ? 'Refreshing' : 'Fetching'} system information...`);
       
-      const data = isRefresh 
-        ? await refreshSystemInformation()
-        : await getSystemInformation();
+      // Always try live API first to ensure fresh data
+      let data;
+      try {
+        data = isRefresh 
+          ? await refreshSystemInformation()
+          : await getSystemInformation();
+        console.log('System info fetched from live API:', data);
+        
+        // If that fails and it's not a refresh, try historical data as fallback
+        if (!data && !isRefresh) {
+          const historicalData = await historyAPI.getLatestHistoricalData('system_info');
+          if (historicalData && historicalData.data) {
+            data = historicalData.data;
+            console.log('System info fetched from historical storage as fallback:', data);
+          }
+        }
+      } catch (liveError) {
+        console.log('Live API failed, trying historical data...', liveError);
+        if (!isRefresh) {
+          const historicalData = await historyAPI.getLatestHistoricalData('system_info');
+          if (historicalData && historicalData.data) {
+            data = historicalData.data;
+            console.log('System info fetched from historical storage:', data);
+          } else {
+            throw liveError; // Re-throw the original error if no fallback works
+          }
+        } else {
+          throw liveError;
+        }
+      }
       
       setSystemInfo(data);
-      console.log('System info fetched successfully:', data);
       
     } catch (err) {
       console.error('Error fetching system information:', err);

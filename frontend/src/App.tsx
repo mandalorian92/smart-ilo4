@@ -15,11 +15,13 @@ import {
   Badge,
   Grid
 } from "@mui/material";
+import HistoryViewer from './components/HistoryViewer';
 import { 
   Home as HomeIcon,
   Visibility as MonitoringIcon,
   Tune as ControlIcon,
   BugReport as DebugIcon,
+  History as HistoryIcon,
   NavigateNext as NavigateNextIcon
 } from '@mui/icons-material';
 import { ThemeProvider } from "./context/ThemeContext";
@@ -227,6 +229,11 @@ function AppContent() {
       label: 'Control', 
       icon: <ControlIcon sx={{ fontSize: { xs: 18, sm: 20 } }} />, 
       description: 'Fan speed control and configuration'
+    },
+    { 
+      label: 'History', 
+      icon: <HistoryIcon sx={{ fontSize: { xs: 18, sm: 20 } }} />, 
+      description: 'Historical data and charts'
     },
     { 
       label: 'Logs', 
@@ -461,6 +468,10 @@ function AppContent() {
             </TabPanel>
 
             <TabPanel value={tabValue} index={3}>
+              <HistoryViewer />
+            </TabPanel>
+
+            <TabPanel value={tabValue} index={4}>
               <LogsTabContent />
             </TabPanel>
           </Box>

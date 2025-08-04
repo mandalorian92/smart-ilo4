@@ -19,7 +19,7 @@ import {
   BoltOutlined as BoltIcon,
   ThermostatOutlined as TempIcon 
 } from '@mui/icons-material';
-import { getPowerInformation, refreshPowerInformation, getILoStatus, type PowerInformation } from '../api';
+import { getPowerInformation, refreshPowerInformation, getILoStatus, historyAPI, type PowerInformation } from '../api';
 import { CARD_STYLES, getGridCardContainerProps } from '../constants/cardStyles';
 
 const PowerCard: React.FC = () => {
@@ -64,13 +64,25 @@ const PowerCard: React.FC = () => {
         return false;
       }
       
-      // Fetch power information
-      const data = isRefresh 
-        ? await refreshPowerInformation()
-        : await getPowerInformation();
+      // Try to get latest power info from historical storage first
+      let data;
+      try {
+        const historicalData = await historyAPI.getLatestHistoricalData('power');
+        if (historicalData && historicalData.data) {
+          data = historicalData.data;
+          console.log('Power info fetched from historical storage:', data);
+        } else {
+          throw new Error('No historical data available');
+        }
+      } catch (historyError) {
+        console.log('Historical data not available, fetching from live API...');
+        data = isRefresh 
+          ? await refreshPowerInformation()
+          : await getPowerInformation();
+        console.log('Power info fetched from live API:', data);
+      }
       
       setPowerInfo(data);
-      console.log('Power info fetched successfully:', data);
       setRetryCount(0);
       return true;
       
