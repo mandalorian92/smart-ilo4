@@ -289,29 +289,54 @@ function AppContent() {
             <SystemLogo height={isMobile ? 28 : isTablet ? 32 : 36} />
           </Box>
 
-          {/* Center Section - User Info and Session (on larger screens) */}
-          {!isMobile && user && (
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: 2,
-              flex: 1,
-              justifyContent: 'center',
-              maxWidth: 400
-            }}>
-              <Chip
-                size="small"
-                label={`Welcome, ${user.username}`}
-                color="primary"
-                variant="outlined"
-                sx={{ 
+          {/* Center Section - Navigation Tabs */}
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'center',
+            flex: 1,
+            maxWidth: 600
+          }}>
+            <Tabs 
+              value={tabValue} 
+              onChange={handleTabChange} 
+              aria-label="iLO4 Dashboard Navigation"
+              variant={isMobile ? "scrollable" : "standard"}
+              scrollButtons={isMobile ? "auto" : false}
+              allowScrollButtonsMobile
+              sx={{
+                '& .MuiTabs-indicator': {
+                  height: 2,
+                  bgcolor: 'primary.main'
+                },
+                '& .MuiTab-root': {
+                  textTransform: 'none',
                   fontWeight: 500,
-                  bgcolor: `${theme.palette.primary.main}08`,
-                  borderColor: theme.palette.primary.main
-                }}
-              />
-            </Box>
-          )}
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  minWidth: 'auto',
+                  minHeight: 48,
+                  px: { xs: 1, sm: 2 },
+                  py: 1.5,
+                  color: 'text.secondary',
+                  '&:hover': {
+                    color: 'text.primary'
+                  },
+                  '&.Mui-selected': {
+                    color: 'primary.main',
+                    fontWeight: 600
+                  }
+                }
+              }}
+            >
+              {tabs.map((tab, index) => (
+                <Tab 
+                  key={tab.label}
+                  label={tab.label}
+                  {...a11yProps(index)}
+                  aria-describedby={`tab-desc-${index}`}
+                />
+              ))}
+            </Tabs>
+          </Box>
 
           {/* Right Section - Actions */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
@@ -323,7 +348,7 @@ function AppContent() {
           </Box>
         </Toolbar>
 
-        {/* Secondary Toolbar - Breadcrumbs and Context */}
+        {/* Secondary Toolbar - Breadcrumbs, User Info and Context */}
         <Box sx={{ 
           px: { xs: 2, sm: 3, md: 4 },
           pb: 1,
@@ -374,19 +399,38 @@ function AppContent() {
               </Typography>
             </Breadcrumbs>
 
-            {/* Current Section Description */}
-            {!isMobile && (
-              <Typography 
-                variant="caption" 
-                color="text.secondary"
-                sx={{ 
-                  fontSize: '0.75rem',
-                  fontStyle: 'italic'
-                }}
-              >
-                {currentTab.description}
-              </Typography>
-            )}
+            {/* User Info and Current Section Description */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              {/* User Chip */}
+              {user && (
+                <Chip
+                  size="small"
+                  label={`Welcome, ${user.username}`}
+                  color="primary"
+                  variant="outlined"
+                  sx={{ 
+                    fontWeight: 500,
+                    bgcolor: `${theme.palette.primary.main}08`,
+                    borderColor: theme.palette.primary.main,
+                    fontSize: '0.75rem'
+                  }}
+                />
+              )}
+              
+              {/* Current Section Description */}
+              {!isMobile && (
+                <Typography 
+                  variant="caption" 
+                  color="text.secondary"
+                  sx={{ 
+                    fontSize: '0.75rem',
+                    fontStyle: 'italic'
+                  }}
+                >
+                  {currentTab.description}
+                </Typography>
+              )}
+            </Box>
           </Box>
         </Box>
       </AppBar>
@@ -405,56 +449,8 @@ function AppContent() {
             flexDirection: 'column'
           }}
         >
-          {/* HPE Design System Style Navigation Tabs */}
-          <Box sx={{ 
-            borderBottom: 1, 
-            borderColor: 'divider', 
-            mb: { xs: 2, sm: 3 }
-          }}>
-            <Tabs 
-              value={tabValue} 
-              onChange={handleTabChange} 
-              aria-label="iLO4 Dashboard Navigation"
-              variant={isMobile ? "scrollable" : "standard"}
-              scrollButtons={isMobile ? "auto" : false}
-              allowScrollButtonsMobile
-              sx={{
-                '& .MuiTabs-indicator': {
-                  height: 2,
-                  bgcolor: 'primary.main'
-                },
-                '& .MuiTab-root': {
-                  textTransform: 'none',
-                  fontWeight: 500,
-                  fontSize: '0.875rem',
-                  minWidth: 'auto',
-                  minHeight: 48,
-                  px: 2,
-                  py: 1.5,
-                  color: 'text.secondary',
-                  '&:hover': {
-                    color: 'text.primary'
-                  },
-                  '&.Mui-selected': {
-                    color: 'primary.main',
-                    fontWeight: 600
-                  }
-                }
-              }}
-            >
-              {tabs.map((tab, index) => (
-                <Tab 
-                  key={tab.label}
-                  label={tab.label}
-                  {...a11yProps(index)}
-                  aria-describedby={`tab-desc-${index}`}
-                />
-              ))}
-            </Tabs>
-          </Box>
-
           {/* Accessible Tab Content with Proper ARIA Labels - All content rendered for performance */}
-          <Box sx={{ flex: 1 }}>
+          <Box sx={{ flex: 1, pt: { xs: 1, sm: 2 } }}>
             <TabPanel value={tabValue} index={0}>
               <OverviewTabContent />
             </TabPanel>

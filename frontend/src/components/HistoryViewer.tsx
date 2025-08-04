@@ -84,7 +84,6 @@ const HistoryViewer: React.FC = () => {
   const [selectedRecords, setSelectedRecords] = useState<Set<number>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
   const [exportMenuAnchor, setExportMenuAnchor] = useState<HTMLElement | null>(null);
-  const [exportSelectedMenuAnchor, setExportSelectedMenuAnchor] = useState<HTMLElement | null>(null);
   
   // Table controls
   const [selectedTable, setSelectedTable] = useState<string>('all');
@@ -221,18 +220,9 @@ const HistoryViewer: React.FC = () => {
     setExportMenuAnchor(null);
   };
 
-  const handleExportSelectedMenuOpen = (event: React.MouseEvent<HTMLButtonElement>) => {
-    setExportSelectedMenuAnchor(event.currentTarget);
-  };
-
-  const handleExportSelectedMenuClose = () => {
-    setExportSelectedMenuAnchor(null);
-  };
-
   const handleExportAction = (format: string, exportSelected: boolean = false) => {
     handleExport(format, exportSelected);
     handleExportMenuClose();
-    handleExportSelectedMenuClose();
   };
 
   const handleExport = async (format: string, exportSelected: boolean = false) => {
@@ -481,7 +471,7 @@ const HistoryViewer: React.FC = () => {
           
           {/* Selection Controls */}
           <Grid item xs={12} sm={6} md={3}>
-            <Box display="flex" gap={1}>
+            <Box display="flex" gap={1} sx={{ minHeight: '40px', alignItems: 'center' }}>
               <Button
                 variant="outlined"
                 size="medium"
@@ -535,60 +525,60 @@ const HistoryViewer: React.FC = () => {
           
           {/* Export Controls */}
           <Grid item xs={12} sm={12} md={6}>
-            <Box display="flex" gap={2} justifyContent="flex-end" alignItems="center" flexWrap="wrap">
+            <Box display="flex" gap={2} justifyContent="flex-end" alignItems="center" sx={{ minHeight: '40px' }}>
               {selectedRecords.size > 0 && (
                 <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
                   {selectedRecords.size} record{selectedRecords.size !== 1 ? 's' : ''} selected
                 </Typography>
               )}
               
-              {/* Export Selected Records - HPE Style Button with Dropdown */}
-              {selectedRecords.size > 0 && (
-                <>
-                  <Button
-                    variant="contained"
-                    size="medium"
-                    startIcon={<Download />}
-                    endIcon={<ArrowDropDown />}
-                    onClick={handleExportSelectedMenuOpen}
-                    disabled={exporting}
-                    sx={{
-                      backgroundColor: '#01a982',
-                      color: 'white',
-                      textTransform: 'none',
-                      fontWeight: 600,
-                      borderRadius: '4px',
-                      px: 3,
-                      py: 1,
-                      '&:hover': {
-                        backgroundColor: '#017a63'
-                      },
-                      '&:disabled': {
-                        backgroundColor: '#ccc'
-                      }
-                    }}
-                  >
-                    Export Selected
-                  </Button>
-                  
-                  <Menu
-                    anchorEl={exportSelectedMenuAnchor}
-                    open={Boolean(exportSelectedMenuAnchor)}
-                    onClose={handleExportSelectedMenuClose}
-                    PaperProps={{
-                      sx: {
-                        mt: 1,
-                        minWidth: 180,
-                        border: '1px solid #e0e0e0',
-                        borderRadius: '8px',
-                        boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.15)'
-                      }
-                    }}
-                  >
+              {/* Single Export Button with Smart Dropdown */}
+              <Button
+                variant="contained"
+                size="medium"
+                startIcon={<Download />}
+                endIcon={<ArrowDropDown />}
+                onClick={handleExportMenuOpen}
+                disabled={exporting}
+                sx={{
+                  backgroundColor: '#01a982',
+                  color: 'white',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  borderRadius: '4px',
+                  px: 3,
+                  py: 1,
+                  '&:hover': {
+                    backgroundColor: '#017a63'
+                  },
+                  '&:disabled': {
+                    backgroundColor: '#ccc'
+                  }
+                }}
+              >
+                Export{selectedRecords.size > 0 ? ` (${selectedRecords.size})` : ' All'}
+              </Button>
+              
+              <Menu
+                anchorEl={exportMenuAnchor}
+                open={Boolean(exportMenuAnchor)}
+                onClose={handleExportMenuClose}
+                PaperProps={{
+                  sx: {
+                    mt: 1,
+                    minWidth: 200,
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '8px',
+                    boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.15)'
+                  }
+                }}
+              >
+                {/* Export Selected Section (if any selected) */}
+                {selectedRecords.size > 0 && (
+                  <>
                     <Typography variant="subtitle2" sx={{ px: 2, py: 1, color: 'text.secondary', fontWeight: 600 }}>
-                      Export {selectedRecords.size} record{selectedRecords.size !== 1 ? 's' : ''} as:
+                      Export {selectedRecords.size} selected record{selectedRecords.size !== 1 ? 's' : ''}:
                     </Typography>
-                    <Divider />
                     {exportFormats.map((format) => (
                       <MenuItem
                         key={`selected-${format.value}`}
@@ -613,57 +603,14 @@ const HistoryViewer: React.FC = () => {
                         />
                       </MenuItem>
                     ))}
-                  </Menu>
-                </>
-              )}
-              
-              {/* Export All Records - HPE Style Button with Dropdown */}
-              <Button
-                variant="outlined"
-                size="medium"
-                startIcon={<Download />}
-                endIcon={<ArrowDropDown />}
-                onClick={handleExportMenuOpen}
-                disabled={exporting}
-                sx={{
-                  borderColor: '#01a982',
-                  color: '#01a982',
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  borderRadius: '4px',
-                  px: 3,
-                  py: 1,
-                  '&:hover': {
-                    borderColor: '#017a63',
-                    backgroundColor: 'rgba(1, 169, 130, 0.04)'
-                  },
-                  '&:disabled': {
-                    borderColor: '#ccc',
-                    color: '#ccc'
-                  }
-                }}
-              >
-                Export All
-              </Button>
-              
-              <Menu
-                anchorEl={exportMenuAnchor}
-                open={Boolean(exportMenuAnchor)}
-                onClose={handleExportMenuClose}
-                PaperProps={{
-                  sx: {
-                    mt: 1,
-                    minWidth: 180,
-                    border: '1px solid #e0e0e0',
-                    borderRadius: '8px',
-                    boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.15)'
-                  }
-                }}
-              >
+                    <Divider sx={{ my: 1 }} />
+                  </>
+                )}
+                
+                {/* Export All Section */}
                 <Typography variant="subtitle2" sx={{ px: 2, py: 1, color: 'text.secondary', fontWeight: 600 }}>
-                  Export all {selectedTable} data as:
+                  Export all {selectedTable} data:
                 </Typography>
-                <Divider />
                 {exportFormats.map((format) => (
                   <MenuItem
                     key={format.value}
@@ -699,17 +646,18 @@ const HistoryViewer: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell padding="checkbox">
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={selectAll}
-                      indeterminate={selectedRecords.size > 0 && !selectAll}
-                      onChange={handleSelectAllOnPage}
-                      disabled={!data?.data || data.data.length === 0}
-                    />
-                  }
-                  label=""
+              <TableCell padding="checkbox" sx={{ verticalAlign: 'middle' }}>
+                <Checkbox
+                  checked={selectAll}
+                  indeterminate={selectedRecords.size > 0 && !selectAll}
+                  onChange={handleSelectAllOnPage}
+                  disabled={!data?.data || data.data.length === 0}
+                  sx={{ 
+                    padding: '9px',
+                    '&.Mui-disabled': {
+                      color: 'rgba(0, 0, 0, 0.26)'
+                    }
+                  }}
                 />
               </TableCell>
               <TableCell>
