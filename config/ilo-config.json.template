@@ -1,0 +1,5 @@
+{
+  "host": "YOUR_ILO_IP_ADDRESS",
+  "username": "YOUR_ILO_USERNAME",
+  "password": "YOUR_ILO_PASSWORD"
+}

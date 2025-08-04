@@ -1,0 +1,9 @@
+{
+  "username": {
+    "id": "username",
+    "username": "username",
+    "createdAt": "ISO_DATE_STRING",
+    "sessionTimeout": 30,
+    "isDefault": false
+  }
+}

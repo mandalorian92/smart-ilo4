@@ -8,6 +8,11 @@ build/
 # Environment variables
 .env
 
+# SECURITY: Never commit credential files
+data/passwords.json
+data/users.json
+config/ilo-config.json
+
 # OS files
 .DS_Store
 Thumbs.db
