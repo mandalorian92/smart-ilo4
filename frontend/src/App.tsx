@@ -266,7 +266,7 @@ function AppContent() {
         onClose={() => setAccountsOpen(false)}
       />
 
-      {/* HPE-Style Global Header */}
+      {/* System-Style Global Header */}
       <AppBar 
         position="static" 
         elevation={0}
@@ -276,7 +276,7 @@ function AppContent() {
           color: 'text.primary'
         }}
       >
-        {/* Primary Header Bar - HPE Standard Layout */}
+        {/* Primary Header Bar - System Standard Layout */}
         <Toolbar 
           sx={{ 
             minHeight: { xs: 56, sm: 64, md: 72 }, 
@@ -287,7 +287,7 @@ function AppContent() {
             width: '100%'
           }}
         >
-          {/* Left Section - HPE Logo Area */}
+          {/* Left Section - System Logo Area */}
           <Box sx={{ 
             display: 'flex', 
             alignItems: 'center', 
@@ -308,7 +308,7 @@ function AppContent() {
             </Typography>
           </Box>
 
-          {/* Center Section - Main Navigation following HPE pattern */}
+          {/* Center Section - Main Navigation following System pattern */}
           <Box sx={{ 
             display: 'flex', 
             justifyContent: 'center',
@@ -361,7 +361,7 @@ function AppContent() {
             </Tabs>
           </Box>
 
-          {/* Right Section - Actions (HPE pattern: apps menu, user) */}
+          {/* Right Section - Actions (System pattern: apps menu, user) */}
           <Box sx={{ 
             display: 'flex', 
             alignItems: 'center', 
