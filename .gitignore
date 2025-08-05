@@ -13,6 +13,11 @@ data/passwords.json
 data/users.json
 config/ilo-config.json
 
+# SSL certificates and private keys
+ssl/*.crt
+ssl/*.key
+ssl/*.pem
+
 # OS files
 .DS_Store
 Thumbs.db

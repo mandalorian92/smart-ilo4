@@ -55,18 +55,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Check if initial setup is needed
       try {
         const authStatus = await authAPI.getStatus();
-        const iloStatus = await getILoStatus();
         
         console.log('Auth status:', authStatus);
-        console.log('iLO status:', iloStatus);
         
-        // Need setup if iLO not configured OR default admin exists
-        const needsSetup = !iloStatus.configured || authStatus.defaultAdminExists;
+        // Only need setup if no users exist at all (truly first time setup)
+        // The defaultAdminExists flag just indicates if default admin is still there
+        // but doesn't mean setup is incomplete
+        const needsSetup = authStatus.requiresSetup || false;
         setNeedsInitialSetup(needsSetup);
         console.log('Needs initial setup:', needsSetup);
       } catch (error) {
         console.error('Error checking setup status:', error);
-        setNeedsInitialSetup(true);
+        // On error, assume setup is needed only if we get a specific setup-required error
+        const needsSetup = (error as any)?.response?.status === 428 || (error as any)?.response?.data?.requiresSetup;
+        setNeedsInitialSetup(needsSetup || false);
       }
     };
 
