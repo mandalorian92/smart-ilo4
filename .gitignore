@@ -14,9 +14,7 @@ data/users.json
 config/ilo-config.json
 
 # SSL certificates and private keys
-ssl/*.crt
-ssl/*.key
-ssl/*.pem
+ssl/
 
 # OS files
 .DS_Store
