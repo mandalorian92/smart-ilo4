@@ -58,17 +58,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         console.log('Auth status:', authStatus);
         
-        // Only need setup if no users exist at all (truly first time setup)
-        // The defaultAdminExists flag just indicates if default admin is still there
-        // but doesn't mean setup is incomplete
-        const needsSetup = authStatus.requiresSetup || false;
+        // Need setup if:
+        // 1. API explicitly says setup is required OR
+        // 2. Default admin exists (legacy check) OR  
+        // 3. No users exist at all (empty system)
+        const needsSetup = authStatus.requiresSetup || 
+                          authStatus.defaultAdminExists || 
+                          authStatus.userCount === 0 ||
+                          !authStatus.hasUsers;
         setNeedsInitialSetup(needsSetup);
         console.log('Needs initial setup:', needsSetup);
       } catch (error) {
         console.error('Error checking setup status:', error);
-        // On error, assume setup is needed only if we get a specific setup-required error
-        const needsSetup = (error as any)?.response?.status === 428 || (error as any)?.response?.data?.requiresSetup;
-        setNeedsInitialSetup(needsSetup || false);
+        // On fresh install or API error, assume setup is needed
+        setNeedsInitialSetup(true);
       }
     };
 
